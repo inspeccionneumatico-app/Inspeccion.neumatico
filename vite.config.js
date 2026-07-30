@@ -9,5 +9,9 @@ export default defineConfig({
   build: {
     outDir: 'docs',
     emptyOutDir: true,
+    // El dataset del reporte (4.493 neumáticos vigentes) va embebido a
+    // propósito: así el sitio es un único archivo estático sin fetch. Son
+    // ~100 kB comprimidos en total.
+    chunkSizeWarningLimit: 1000,
   },
 })

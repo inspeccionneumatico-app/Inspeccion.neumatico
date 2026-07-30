@@ -110,6 +110,46 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+/* ------------------------------------------------------ barra filtros */
+.filtros {
+  position: sticky; top: 0; z-index: 30;
+  margin: 18px 0 4px;
+  padding: 14px 16px 12px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.filtros-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filtros-lbl {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-muted); margin-right: 2px;
+}
+.buscador {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1 1 260px; min-width: 200px;
+  padding: 9px 12px;
+  background: var(--plane);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.buscador:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.buscador input {
+  flex: 1; min-width: 0;
+  border: 0; background: none; outline: none;
+  font: inherit; font-size: 14.5px; letter-spacing: .04em;
+  color: var(--ink);
+}
+.buscador input::placeholder { color: var(--ink-muted); letter-spacing: normal; }
+.limpiar {
+  border: 0; background: none; cursor: pointer;
+  color: var(--ink-muted); font-size: 15px; line-height: 1; padding: 2px 4px;
+}
+.chip-reset { border-color: var(--critical); color: var(--critical); font-weight: 600; }
+.filtros-estado { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.filtros-estado strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+
 /* ------------------------------------------------------------ layout */
 section { margin-top: 34px; }
 .sec-head { margin-bottom: 12px; }

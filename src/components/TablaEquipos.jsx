@@ -13,27 +13,20 @@ const COLS = [
   { k: 'ultima', t: 'Última', num: false },
 ]
 
-export default function TablaEquipos({ equipos, centros }) {
-  const [q, setQ] = useState('')
-  const [cd, setCd] = useState(null)
+export default function TablaEquipos({ equipos }) {
   const [orden, setOrden] = useState({ k: 'riesgo', asc: false })
 
   const filas = useMemo(() => {
-    const term = q.trim().toUpperCase()
-    let out = equipos.filter((e) => {
-      const okQ = !term || e.patente.includes(term) || (e.cd || '').toUpperCase().includes(term)
-      const okCd = !cd || e.cd === cd
-      return okQ && okCd
-    })
+    let out = [...equipos]
     const { k, asc } = orden
-    out = [...out].sort((a, b) => {
+    out = out.sort((a, b) => {
       const va = a[k] ?? (typeof b[k] === 'number' ? -1 : '')
       const vb = b[k] ?? (typeof a[k] === 'number' ? -1 : '')
       if (typeof va === 'number' && typeof vb === 'number') return asc ? va - vb : vb - va
       return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va))
     })
     return out
-  }, [equipos, q, cd, orden])
+  }, [equipos, orden])
 
   function ordenar(k) {
     setOrden((o) => (o.k === k ? { k, asc: !o.asc } : { k, asc: false }))
@@ -41,27 +34,9 @@ export default function TablaEquipos({ equipos, centros }) {
 
   return (
     <>
-      <div className="controls">
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar patente o centro…"
-          aria-label="Buscar equipo por patente o centro"
-        />
-        <button className="chip" aria-pressed={cd === null} onClick={() => setCd(null)}>
-          Todos ({equipos.length})
-        </button>
-        {centros.map((c) => (
-          <button key={c.cd} className="chip" aria-pressed={cd === c.cd} onClick={() => setCd(c.cd)}>
-            {c.cd} ({c.equipos})
-          </button>
-        ))}
-      </div>
-
       <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-2)' }}>
-        {fmt(filas.length)} equipo{filas.length === 1 ? '' : 's'}
-        {cd ? ` en ${cd}` : ''} · ordenados por {COLS.find((c) => c.k === orden.k)?.t.toLowerCase()}
+        {fmt(filas.length)} equipo{filas.length === 1 ? '' : 's'} · ordenados por{' '}
+        {COLS.find((c) => c.k === orden.k)?.t.toLowerCase()}
         {orden.asc ? ' ascendente' : ' descendente'}
       </p>
 

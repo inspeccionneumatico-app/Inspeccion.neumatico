@@ -1,12 +1,15 @@
+import { useMemo, useState } from 'react'
 import datos from './data/datos.json'
 import { ESTADOS, colorSurco, colorPresion, fmt } from './estados.js'
+import { filtrar, agregar } from './agregar.js'
+import BarraFiltros from './components/BarraFiltros.jsx'
 import BarrasH from './components/BarrasH.jsx'
 import BarrasApiladas from './components/BarrasApiladas.jsx'
 import Histograma from './components/Histograma.jsx'
 import Linea from './components/Linea.jsx'
 import TablaEquipos from './components/TablaEquipos.jsx'
 
-const { resumen: r, porCentro, distSurco, distPresion, marcas, medidas, serie, equipos } = datos
+const { meta, centros, actual, equipos: TODOS_EQUIPOS, seriePorCd } = datos
 
 function fecha(iso) {
   if (!iso) return '—'
@@ -14,7 +17,6 @@ function fecha(iso) {
   return `${d}/${m}/${a}`
 }
 
-/** Tarjeta de indicador. El valor va acompañado de contexto, no solo del número. */
 function Tile({ label, value, hint, color, pct }) {
   return (
     <div className="card tile">
@@ -31,17 +33,33 @@ function Tile({ label, value, hint, color, pct }) {
 }
 
 export default function App() {
-  const vig = r.neumaticosVigentes || 1
-  const pctRiesgo = Math.round((r.riesgo / vig) * 100)
-  const pctAdv = Math.round((r.advertencia / vig) * 100)
-  const pctBueno = Math.round((r.bueno / vig) * 100)
+  const [cd, setCd] = useState(null)
+  const [q, setQ] = useState('')
 
-  // Top 12 equipos con más neumáticos en riesgo (acción inmediata).
-  const criticos = [...equipos]
-    .filter((e) => (e.riesgo || 0) > 0)
-    .sort((a, b) => b.riesgo - a.riesgo || (a.surcoProm ?? 99) - (b.surcoProm ?? 99))
-    .slice(0, 12)
-    .map((e) => ({ nombre: `${e.patente} · ${e.cd ?? 's/c'}`, cantidad: e.riesgo }))
+  // Equipos por centro (para el conteo de los chips), fijo.
+  const conteosCd = useMemo(() => {
+    const m = {}
+    for (const e of TODOS_EQUIPOS) {
+      if (e.cd) m[e.cd] = (m[e.cd] || 0) + 1
+    }
+    return m
+  }, [])
+
+  const filas = useMemo(() => filtrar(actual, cd, q), [cd, q])
+  const a = useMemo(() => agregar(filas), [filas])
+
+  // Equipos de la tabla: respetan el mismo filtro.
+  const equiposFiltrados = useMemo(() => {
+    const term = q.trim().toUpperCase()
+    return TODOS_EQUIPOS.filter(
+      (e) => (!cd || e.cd === cd) && (!term || e.patente.includes(term)),
+    )
+  }, [cd, q])
+
+  // La tendencia usa el histórico completo del centro elegido.
+  const serie = seriePorCd[cd ?? 'TODOS'] ?? []
+
+  const sinResultados = a.vigentes === 0
 
   return (
     <div className="wrap">
@@ -49,166 +67,199 @@ export default function App() {
         <p className="eyebrow">Reporte de flota · Inspección de neumáticos</p>
         <h1>Estado de los neumáticos de la flota</h1>
         <p className="lede">
-          Consolidado de {fmt(r.inspecciones)} inspecciones sobre {fmt(r.equipos)} equipos.
-          Los indicadores de estado reflejan la <strong>última inspección de cada equipo</strong>
-          {' '}({fmt(r.neumaticosVigentes)} neumáticos vigentes); las tendencias usan el histórico completo.
+          Consolidado de {fmt(meta.inspecciones)} inspecciones sobre {fmt(meta.equipos)} equipos.
+          Los indicadores reflejan la <strong>última inspección de cada equipo</strong>;
+          las tendencias usan el histórico completo.
         </p>
-        <span className="periodo">📅 {fecha(r.desde)} → {fecha(r.hasta)}</span>
+        <span className="periodo">📅 {fecha(meta.desde)} → {fecha(meta.hasta)}</span>
       </header>
 
-      {/* ------------------------------------------------ indicadores */}
-      <section>
-        <div className="sec-head">
-          <h2>Indicadores</h2>
-          <p>Estado actual de la flota según la última inspección registrada por equipo.</p>
-        </div>
-        <div className="grid g-tiles">
-          <Tile label="Equipos" value={fmt(r.equipos)} hint={`${fmt(r.inspecciones)} inspecciones históricas`} />
-          <Tile label="Neumáticos vigentes" value={fmt(r.neumaticosVigentes)} hint={`${fmt(r.neumaticosHistoricos)} registros históricos`} />
-          <Tile label="En riesgo" value={fmt(r.riesgo)} hint={`${pctRiesgo}% de los vigentes`} color="var(--critical)" pct={pctRiesgo} />
-          <Tile label="Advertencia" value={fmt(r.advertencia)} hint={`${pctAdv}% · surco ≤ 6 mm`} color="var(--warning)" pct={pctAdv} />
-          <Tile label="Óptimos" value={fmt(r.bueno)} hint={`${pctBueno}% de los vigentes`} color="var(--good)" pct={pctBueno} />
-          <Tile label="Surco crítico" value={fmt(r.surcoCritico)} hint="< 2,5 mm — cambio inmediato" color="var(--critical)" />
-          <Tile label="Presión crítica" value={fmt(r.presionCritica)} hint="< 95 PSI" color="var(--serious)" />
-          <Tile label="Promedios" value={`${r.surcoPromedio} mm`} hint={`${fmt(r.presionPromedio)} PSI de presión media`} />
-        </div>
-      </section>
+      <BarraFiltros
+        centros={centros}
+        conteos={conteosCd}
+        cd={cd}
+        setCd={setCd}
+        q={q}
+        setQ={setQ}
+        vigentes={a.vigentes}
+        equipos={a.equipos}
+        totalEquipos={TODOS_EQUIPOS.length}
+      />
 
-      {/* ------------------------------------------------ composición */}
-      <section>
-        <div className="sec-head">
-          <h2>Composición del estado actual</h2>
-          <p>Los {fmt(r.neumaticosVigentes)} neumáticos vigentes, clasificados por condición.</p>
-        </div>
-        <div className="card">
-          <ul className="legend">
-            {ESTADOS.map((e) => (
-              <li key={e.clave}>
-                <i className="swatch" style={{ background: e.color }} />
-                {e.etiqueta} — <strong style={{ color: 'var(--ink)' }}>{fmt(r[e.clave])}</strong> ({Math.round((r[e.clave] / vig) * 100)}%)
-              </li>
-            ))}
-          </ul>
-          <div style={{ display: 'flex', height: 26, gap: 2, borderRadius: 4, overflow: 'hidden' }}>
-            {ESTADOS.map((e, i) => (
-              <i
-                key={e.clave}
-                title={`${e.etiqueta}: ${fmt(r[e.clave])}`}
-                style={{
-                  flex: `${r[e.clave]} 0 0`,
-                  background: e.color,
-                  borderRadius: i === 0 ? '4px 0 0 4px' : i === ESTADOS.length - 1 ? '0 4px 4px 0' : 0,
-                }}
-              />
-            ))}
-          </div>
-          <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-2)' }}>
-            <strong style={{ color: 'var(--critical)' }}>▲ {pctRiesgo}%</strong> de los neumáticos en servicio está bajo el
-            estándar de surco o de presión y requiere atención.
+      {sinResultados ? (
+        <div className="card" style={{ marginTop: 24, textAlign: 'center', padding: 40 }}>
+          <p style={{ margin: 0, fontWeight: 700 }}>Ningún equipo coincide con el filtro</p>
+          <p style={{ margin: '6px 0 0', color: 'var(--ink-2)' }}>
+            Revisa la patente o elige otro centro.
           </p>
         </div>
-      </section>
+      ) : (
+        <>
+          {/* ------------------------------------------------ indicadores */}
+          <section>
+            <div className="sec-head">
+              <h2>Indicadores</h2>
+              <p>Estado actual según la última inspección registrada de cada equipo.</p>
+            </div>
+            <div className="grid g-tiles">
+              <Tile label="Equipos" value={fmt(a.equipos)} hint={cd ? `en ${cd}` : 'toda la flota'} />
+              <Tile label="Neumáticos vigentes" value={fmt(a.vigentes)} hint="en servicio hoy" />
+              <Tile label="En riesgo" value={fmt(a.riesgo)} hint={`${a.pctRiesgo}% de los vigentes`} color="var(--critical)" pct={a.pctRiesgo} />
+              <Tile label="Advertencia" value={fmt(a.advertencia)} hint={`${a.pctAdv}% · surco ≤ 6 mm`} color="var(--warning)" pct={a.pctAdv} />
+              <Tile label="Óptimos" value={fmt(a.bueno)} hint={`${a.pctBueno}% de los vigentes`} color="var(--good)" pct={a.pctBueno} />
+              <Tile label="Surco crítico" value={fmt(a.surcoCritico)} hint="< 2,5 mm — cambio inmediato" color="var(--critical)" />
+              <Tile label="Presión crítica" value={fmt(a.presionCritica)} hint="< 95 PSI" color="var(--serious)" />
+              <Tile label="Promedios" value={`${a.surcoPromedio} mm`} hint={`${fmt(a.presionPromedio)} PSI de presión media`} />
+            </div>
+          </section>
 
-      {/* ------------------------------------------------ por centro */}
-      <section>
-        <div className="sec-head">
-          <h2>Por centro de distribución</h2>
-          <p>Volumen y condición de los neumáticos en servicio de cada centro.</p>
-        </div>
-        <div className="card">
-          <BarrasApiladas datos={porCentro} campoNombre="cd" />
-        </div>
-      </section>
+          {/* ------------------------------------------------ composición */}
+          <section>
+            <div className="sec-head">
+              <h2>Composición del estado actual</h2>
+              <p>Los {fmt(a.vigentes)} neumáticos vigentes, clasificados por condición.</p>
+            </div>
+            <div className="card">
+              <ul className="legend">
+                {ESTADOS.map((e) => (
+                  <li key={e.clave}>
+                    <i className="swatch" style={{ background: e.color }} />
+                    {e.etiqueta} — <strong style={{ color: 'var(--ink)' }}>{fmt(a[e.clave])}</strong>
+                    {' '}({a.vigentes ? Math.round((a[e.clave] / a.vigentes) * 100) : 0}%)
+                  </li>
+                ))}
+              </ul>
+              <div style={{ display: 'flex', height: 26, gap: 2, borderRadius: 4, overflow: 'hidden' }}>
+                {ESTADOS.map((e, i) =>
+                  a[e.clave] > 0 ? (
+                    <i
+                      key={e.clave}
+                      title={`${e.etiqueta}: ${fmt(a[e.clave])}`}
+                      style={{
+                        flex: `${a[e.clave]} 0 0`,
+                        background: e.color,
+                        borderRadius: i === 0 ? '4px 0 0 4px' : i === ESTADOS.length - 1 ? '0 4px 4px 0' : 0,
+                      }}
+                    />
+                  ) : null,
+                )}
+              </div>
+              <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-2)' }}>
+                <strong style={{ color: 'var(--critical)' }}>▲ {a.pctRiesgo}%</strong> de los neumáticos en
+                servicio está bajo el estándar de surco o de presión y requiere atención.
+              </p>
+            </div>
+          </section>
 
-      {/* ------------------------------------------------ distribuciones */}
-      <section>
-        <div className="sec-head">
-          <h2>Distribución de mediciones</h2>
-          <p>Cómo se reparten las mediciones de los neumáticos vigentes. El color marca la zona de riesgo.</p>
-        </div>
-        <div className="grid g-2">
-          <div className="card">
-            <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Surco medido (mm)</h3>
-            <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
-              Mínimo legal 3 mm · advertencia desde 6 mm
-            </p>
-            <Histograma datos={distSurco} colorDe={colorSurco} unidad="mm" total={vig} />
-          </div>
-          <div className="card">
-            <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Presión medida (PSI)</h3>
-            <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
-              Recomendada 100 PSI (dirección 115) · tolerancia 5 PSI
-            </p>
-            <Histograma datos={distPresion} colorDe={colorPresion} unidad="PSI" total={vig} />
-          </div>
-        </div>
-      </section>
+          {/* ------------------------------------------------ por centro */}
+          {a.porCentro.length > 1 && (
+            <section>
+              <div className="sec-head">
+                <h2>Por centro de distribución</h2>
+                <p>Volumen y condición de los neumáticos en servicio de cada centro.</p>
+              </div>
+              <div className="card">
+                <BarrasApiladas datos={a.porCentro} campoNombre="cd" />
+              </div>
+            </section>
+          )}
 
-      {/* ------------------------------------------------ tendencia */}
-      <section>
-        <div className="sec-head">
-          <h2>Tendencia histórica</h2>
-          <p>Actividad de inspección y desgaste promedio mes a mes ({serie.length} meses con registros).</p>
-        </div>
-        <div className="grid g-2">
-          <div className="card">
-            <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Inspecciones por mes</h3>
-            <Linea datos={serie} campoY="inspecciones" etiquetaY="Inspecciones" colorHex="#2a78d6" />
-          </div>
-          <div className="card">
-            <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Surco promedio medido (mm)</h3>
-            <Linea
-              datos={serie}
-              campoY="surcoProm"
-              etiquetaY="Surco promedio"
-              colorHex="#1baf7a"
-              referencia={3}
-              etiquetaReferencia="mínimo 3 mm"
-              sufijo=" mm"
-            />
-          </div>
-        </div>
-      </section>
+          {/* ------------------------------------------------ distribuciones */}
+          <section>
+            <div className="sec-head">
+              <h2>Distribución de mediciones</h2>
+              <p>Cómo se reparten las mediciones de los neumáticos vigentes. El color marca la zona de riesgo.</p>
+            </div>
+            <div className="grid g-2">
+              <div className="card">
+                <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Surco medido (mm)</h3>
+                <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
+                  Mínimo legal 3 mm · advertencia desde 6 mm
+                </p>
+                <Histograma datos={a.distSurco} colorDe={colorSurco} unidad="mm" total={a.vigentes} />
+              </div>
+              <div className="card">
+                <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Presión medida (PSI)</h3>
+                <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
+                  Recomendada 100 PSI (dirección 115) · tolerancia 5 PSI
+                </p>
+                <Histograma datos={a.distPresion} colorDe={colorPresion} unidad="PSI" total={a.vigentes} />
+              </div>
+            </div>
+          </section>
 
-      {/* ------------------------------------------------ prioridades */}
-      <section>
-        <div className="sec-head">
-          <h2>Equipos que requieren atención</h2>
-          <p>Los 12 equipos con más neumáticos fuera de estándar en su última inspección.</p>
-        </div>
-        <div className="card">
-          <BarrasH datos={criticos} color="var(--critical)" anchoEtiqueta={190} />
-        </div>
-      </section>
+          {/* ------------------------------------------------ tendencia */}
+          <section>
+            <div className="sec-head">
+              <h2>Tendencia histórica {cd && <span style={{ fontWeight: 400, color: 'var(--ink-2)' }}>· {cd}</span>}</h2>
+              <p>
+                Actividad de inspección y desgaste promedio mes a mes ({serie.length} meses con registros).
+                Sigue el filtro de centro; la búsqueda por patente no la altera.
+              </p>
+            </div>
+            <div className="grid g-2">
+              <div className="card">
+                <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Inspecciones por mes</h3>
+                <Linea datos={serie} campoY="inspecciones" etiquetaY="Inspecciones" colorHex="#2a78d6" />
+              </div>
+              <div className="card">
+                <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Surco promedio medido (mm)</h3>
+                <Linea
+                  datos={serie}
+                  campoY="surcoProm"
+                  etiquetaY="Surco promedio"
+                  colorHex="#1baf7a"
+                  referencia={3}
+                  etiquetaReferencia="mínimo 3 mm"
+                  sufijo=" mm"
+                />
+              </div>
+            </div>
+          </section>
 
-      {/* ------------------------------------------------ marcas/medidas */}
-      <section>
-        <div className="sec-head">
-          <h2>Marcas y medidas en servicio</h2>
-          <p>Distribución de los neumáticos vigentes.</p>
-        </div>
-        <div className="grid g-2">
-          <div className="card">
-            <h3 style={{ margin: '0 0 14px', fontSize: 14 }}>Marcas más usadas</h3>
-            <BarrasH datos={marcas} />
-          </div>
-          <div className="card">
-            <h3 style={{ margin: '0 0 14px', fontSize: 14 }}>Medidas más usadas</h3>
-            <BarrasH datos={medidas} anchoEtiqueta={130} />
-          </div>
-        </div>
-      </section>
+          {/* ------------------------------------------------ prioridades */}
+          {a.criticos.length > 0 && (
+            <section>
+              <div className="sec-head">
+                <h2>Equipos que requieren atención</h2>
+                <p>Los {a.criticos.length} equipos con más neumáticos fuera de estándar en su última inspección.</p>
+              </div>
+              <div className="card">
+                <BarrasH datos={a.criticos} color="var(--critical)" anchoEtiqueta={190} />
+              </div>
+            </section>
+          )}
 
-      {/* ------------------------------------------------ tabla */}
-      <section>
-        <div className="sec-head">
-          <h2>Detalle por equipo</h2>
-          <p>Busca por patente o centro, filtra y ordena por cualquier columna.</p>
-        </div>
-        <div className="card">
-          <TablaEquipos equipos={equipos} centros={porCentro} />
-        </div>
-      </section>
+          {/* ------------------------------------------------ marcas/medidas */}
+          <section>
+            <div className="sec-head">
+              <h2>Marcas y medidas en servicio</h2>
+              <p>Distribución de los neumáticos vigentes.</p>
+            </div>
+            <div className="grid g-2">
+              <div className="card">
+                <h3 style={{ margin: '0 0 14px', fontSize: 14 }}>Marcas más usadas</h3>
+                <BarrasH datos={a.marcas} />
+              </div>
+              <div className="card">
+                <h3 style={{ margin: '0 0 14px', fontSize: 14 }}>Medidas más usadas</h3>
+                <BarrasH datos={a.medidas} anchoEtiqueta={130} />
+              </div>
+            </div>
+          </section>
+
+          {/* ------------------------------------------------ tabla */}
+          <section>
+            <div className="sec-head">
+              <h2>Detalle por equipo</h2>
+              <p>Ordena por cualquier columna. Usa los filtros de arriba para acotar.</p>
+            </div>
+            <div className="card">
+              <TablaEquipos equipos={equiposFiltrados} />
+            </div>
+          </section>
+        </>
+      )}
 
       <footer className="foot">
         <p>
@@ -216,11 +267,15 @@ export default function App() {
           recomendado menos 5 PSI. Advertencia: surco ≤ 6 mm estando sobre el mínimo. Óptimo: el resto.
         </p>
         <p>
-          Los indicadores de estado consideran solo la última inspección de cada equipo, para reflejar la
-          situación vigente y no el acumulado histórico. Las inspecciones importadas no incluyen odómetro
-          ni fotografías.
+          Los indicadores consideran solo la última inspección de cada equipo, para reflejar la situación
+          vigente y no el acumulado histórico. Las inspecciones importadas no incluyen odómetro ni
+          fotografías. Se descartaron {meta.descartadas} mediciones fuera de rango físico (errores de
+          captura del archivo original).
         </p>
-        <p>Generado desde la base de la app Inspección Neumáticos · {fmt(r.equipos)} equipos · {fecha(r.desde)} a {fecha(r.hasta)}.</p>
+        <p>
+          Generado desde la base de la app Inspección Neumáticos · {fmt(meta.equipos)} equipos ·{' '}
+          {fmt(meta.neumaticosHistoricos)} registros históricos · {fecha(meta.desde)} a {fecha(meta.hasta)}.
+        </p>
       </footer>
     </div>
   )

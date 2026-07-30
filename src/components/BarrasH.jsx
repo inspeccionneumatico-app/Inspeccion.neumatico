@@ -10,8 +10,6 @@ export default function BarrasH({ datos, campoNombre = 'nombre', campoValor = 'c
   if (!datos?.length) return null
 
   const max = Math.max(...datos.map((d) => d[campoValor])) || 1
-  const alturaFila = 30
-  const alto = datos.length * alturaFila
   const anchoTotal = 100 // porcentaje del área de trazado
 
   return (
@@ -47,9 +45,6 @@ export default function BarrasH({ datos, campoNombre = 'nombre', campoValor = 'c
         })}
       </div>
       <Tooltip tt={tt} />
-      <span className="sr-only" style={{ position: 'absolute', left: -9999 }}>
-        Alto máximo del gráfico {alto} px
-      </span>
     </>
   )
 }
