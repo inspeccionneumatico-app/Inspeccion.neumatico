@@ -245,6 +245,80 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .mini-stack { display: flex; height: 8px; width: 92px; border-radius: 4px; overflow: hidden; gap: 2px; }
 .mini-stack > i { display: block; height: 100%; }
 
+/* --------------------------------------- ficha de equipo (historial) */
+tbody tr.clicable { cursor: pointer; }
+tbody tr.clicable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ver-hist { color: var(--accent); font-weight: 600; font-size: 12px; }
+
+.ficha-fondo {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(11, 11, 11, .45);
+  display: flex; justify-content: flex-end;
+}
+.ficha {
+  width: min(780px, 100%);
+  height: 100%; overflow-y: auto;
+  background: var(--plane);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 20px 22px 60px;
+}
+.ficha-top {
+  position: sticky; top: -20px; z-index: 2;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  margin: -20px -22px 14px; padding: 18px 22px 12px;
+  background: color-mix(in srgb, var(--plane) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.ficha-pat { margin: 0; font-size: 24px; letter-spacing: .02em; }
+.ficha-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); }
+.ficha-cerrar {
+  flex: none; cursor: pointer;
+  width: 34px; height: 34px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  font-size: 15px; line-height: 1;
+}
+.ficha-resumen { margin: 0 0 6px; font-size: 13.5px; color: var(--ink-2); }
+.ficha-sec { margin-top: 22px; }
+.ficha-sec h3 { margin: 0 0 3px; font-size: 15px; }
+.nota { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-2); }
+.nota .swatch { display: inline-block; vertical-align: middle; margin-right: 3px; }
+
+.insp-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.insp {
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: 11px;
+  overflow: hidden;
+}
+.insp-head {
+  width: 100%; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 11px 13px; border: 0; background: none; font: inherit; color: inherit;
+}
+.insp-head:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.insp-caret { color: var(--ink-muted); font-size: 12px; }
+.insp-fecha { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 88px; }
+.tag-vigente {
+  margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-style: normal; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.insp-nums {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.insp-nums > span { display: inline-flex; align-items: center; gap: 5px; }
+.insp-n { margin-left: auto; font-size: 11.5px; color: var(--ink-muted); }
+.insp .tbl-wrap { border-top: 1px solid var(--grid); padding: 0 13px 10px; }
+.delta { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .ficha { padding: 16px 14px 50px; }
+  .ficha-top { margin: -16px -14px 12px; padding: 14px 14px 10px; }
+}
+
 footer.foot {
   margin-top: 44px; padding-top: 18px;
   border-top: 1px solid var(--border);

@@ -1,15 +1,14 @@
 import { useMemo, useState } from 'react'
-import datos from './data/datos.json'
+import { meta, centros, ACTUAL as actual, EQUIPOS as TODOS_EQUIPOS, seriePorCd } from './datos.js'
 import { ESTADOS, colorSurco, colorPresion, fmt } from './estados.js'
 import { filtrar, agregar } from './agregar.js'
 import BarraFiltros from './components/BarraFiltros.jsx'
 import BarrasH from './components/BarrasH.jsx'
 import BarrasApiladas from './components/BarrasApiladas.jsx'
+import FichaEquipo from './components/FichaEquipo.jsx'
 import Histograma from './components/Histograma.jsx'
 import Linea from './components/Linea.jsx'
 import TablaEquipos from './components/TablaEquipos.jsx'
-
-const { meta, centros, actual, equipos: TODOS_EQUIPOS, seriePorCd } = datos
 
 function fecha(iso) {
   if (!iso) return '—'
@@ -35,6 +34,8 @@ function Tile({ label, value, hint, color, pct }) {
 export default function App() {
   const [cd, setCd] = useState(null)
   const [q, setQ] = useState('')
+  // Equipo cuyo historial se está mirando (null = ficha cerrada).
+  const [ficha, setFicha] = useState(null)
 
   // Equipos por centro (para el conteo de los chips), fijo.
   const conteosCd = useMemo(() => {
@@ -252,14 +253,19 @@ export default function App() {
           <section>
             <div className="sec-head">
               <h2>Detalle por equipo</h2>
-              <p>Ordena por cualquier columna. Usa los filtros de arriba para acotar.</p>
+              <p>
+                Ordena por cualquier columna y abre un equipo para ver su historial de
+                inspecciones. Usa los filtros de arriba para acotar.
+              </p>
             </div>
             <div className="card">
-              <TablaEquipos equipos={equiposFiltrados} />
+              <TablaEquipos equipos={equiposFiltrados} onAbrir={setFicha} />
             </div>
           </section>
         </>
       )}
+
+      {ficha && <FichaEquipo equipo={ficha} onCerrar={() => setFicha(null)} />}
 
       <footer className="foot">
         <p>

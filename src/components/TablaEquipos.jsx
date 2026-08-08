@@ -11,9 +11,10 @@ const COLS = [
   { k: 'presionProm', t: 'Presión prom.', num: true },
   { k: 'inspecciones', t: 'Insp.', num: true },
   { k: 'ultima', t: 'Última', num: false },
+  { k: 'historial', t: 'Historial', num: false, noSort: true },
 ]
 
-export default function TablaEquipos({ equipos }) {
+export default function TablaEquipos({ equipos, onAbrir }) {
   const [orden, setOrden] = useState({ k: 'riesgo', asc: false })
 
   const filas = useMemo(() => {
@@ -37,7 +38,7 @@ export default function TablaEquipos({ equipos }) {
       <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-2)' }}>
         {fmt(filas.length)} equipo{filas.length === 1 ? '' : 's'} · ordenados por{' '}
         {COLS.find((c) => c.k === orden.k)?.t.toLowerCase()}
-        {orden.asc ? ' ascendente' : ' descendente'}
+        {orden.asc ? ' ascendente' : ' descendente'} · toca una fila para ver su historial
       </p>
 
       <div className="tbl-wrap" style={{ maxHeight: 520, overflowY: 'auto' }}>
@@ -63,7 +64,15 @@ export default function TablaEquipos({ equipos }) {
             {filas.map((e) => {
               const tot = (e.riesgo || 0) + (e.advertencia || 0) + (e.bueno || 0)
               return (
-                <tr key={e.patente}>
+                <tr
+                  key={e.patente}
+                  className="clicable"
+                  tabIndex={0}
+                  onClick={() => onAbrir(e)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onAbrir(e) }
+                  }}
+                >
                   <td className="pat">{e.patente}</td>
                   <td style={{ color: 'var(--ink-2)' }}>{e.cd ?? '—'}</td>
                   <td className="num">{e.neumaticos}</td>
@@ -97,6 +106,7 @@ export default function TablaEquipos({ equipos }) {
                   <td className="num">{e.presionProm != null ? `${e.presionProm} PSI` : '—'}</td>
                   <td className="num">{e.inspecciones}</td>
                   <td style={{ color: 'var(--ink-2)' }}>{e.ultima ?? '—'}</td>
+                  <td className="ver-hist">Ver historial →</td>
                 </tr>
               )
             })}
