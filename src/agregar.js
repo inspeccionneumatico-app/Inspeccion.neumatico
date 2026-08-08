@@ -48,8 +48,10 @@ export function filtrar(actual, cd, q) {
 export function agregar(filas) {
   const equiposSet = new Set()
   let riesgo = 0, advertencia = 0, bueno = 0
-  let surcoCritico = 0, presionCritica = 0
+  let surcoCritico = 0, presionCritica = 0, presionRegularizada = 0
   const surcos = [], presiones = []
+  // Original vs recauchado, con su composición de estado.
+  const porTipo = new Map()
 
   for (const f of filas) {
     equiposSet.add(f.p)
@@ -57,9 +59,19 @@ export function agregar(filas) {
     else if (f.n === 'advertencia') advertencia++
     else bueno++
     if (f.s < 2.5) surcoCritico++
-    if (f.r < 95) presionCritica++
+    // La presión solo queda pendiente si NO se reguló en la inspección.
+    if (f.r < 95 && !f.reg) presionCritica++
+    if (f.r < f.rr - 5 && f.reg) presionRegularizada++
     surcos.push(f.s)
     presiones.push(f.r)
+
+    const clave = f.t ?? 'sinDato'
+    if (!porTipo.has(clave)) {
+      porTipo.set(clave, { tipo: clave, riesgo: 0, advertencia: 0, bueno: 0, surco: [] })
+    }
+    const t = porTipo.get(clave)
+    t[f.n]++
+    t.surco.push(f.s)
   }
 
   const vigentes = filas.length
@@ -113,6 +125,21 @@ export function agregar(filas) {
     bueno,
     surcoCritico,
     presionCritica,
+    presionRegularizada,
+    porTipo: [...porTipo.values()]
+      .map((t) => {
+        const tot = t.riesgo + t.advertencia + t.bueno
+        return {
+          tipo: t.tipo,
+          neumaticos: tot,
+          riesgo: t.riesgo,
+          advertencia: t.advertencia,
+          bueno: t.bueno,
+          pctRiesgo: tot ? Math.round((t.riesgo / tot) * 100) : 0,
+          surcoProm: prom(t.surco),
+        }
+      })
+      .sort((a, b) => b.neumaticos - a.neumaticos),
     surcoPromedio: prom(surcos),
     presionPromedio: prom(presiones, 0),
     pctRiesgo: vigentes ? Math.round((riesgo / vigentes) * 100) : 0,

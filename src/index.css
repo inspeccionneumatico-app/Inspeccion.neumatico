@@ -313,6 +313,17 @@ tbody tr.clicable:focus-visible { outline: 2px solid var(--accent); outline-offs
 .insp-n { margin-left: auto; font-size: 11.5px; color: var(--ink-muted); }
 .insp .tbl-wrap { border-top: 1px solid var(--grid); padding: 0 13px 10px; }
 .delta { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.marca-reg { font-size: 11px; font-weight: 700; }
+
+/* Sigla original (N) / recauchado (R): el color acompaña, no informa solo. */
+.tag-tipo {
+  display: inline-block; min-width: 20px; text-align: center;
+  padding: 1px 5px; border-radius: 5px;
+  font-size: 11px; font-weight: 700;
+  border: 1px solid var(--border); color: var(--ink-2);
+}
+.tag-tipo.t-original { background: color-mix(in srgb, var(--seq-450) 14%, transparent); color: var(--accent); }
+.tag-tipo.t-recauchado { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--ink); }
 
 @media (max-width: 640px) {
   .ficha { padding: 16px 14px 50px; }

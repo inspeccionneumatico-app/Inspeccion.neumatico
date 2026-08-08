@@ -146,6 +146,7 @@ function FilaInspeccion({ insp, previa, abierta, onToggle, indice, total }) {
             <thead>
               <tr>
                 <th>Pos</th>
+                <th>Tipo</th>
                 <th>Marca</th>
                 <th>Medida</th>
                 <th style={{ textAlign: 'right' }}>Surco</th>
@@ -161,13 +162,31 @@ function FilaInspeccion({ insp, previa, abierta, onToggle, indice, total }) {
                 return (
                   <tr key={n.pos}>
                     <td className="pat">{n.pos}</td>
+                    <td>
+                      <span className={`tag-tipo t-${n.tipo.clave}`} title={n.tipo.etiqueta}>
+                        {n.tipo.sigla}
+                      </span>
+                    </td>
                     <td>{n.marca}</td>
                     <td style={{ color: 'var(--ink-2)' }}>{n.medida}</td>
                     <td className="num">{n.surco.toFixed(1)} mm</td>
                     <td className="num">
                       {prev ? <Delta actual={n.surco} previo={prev.surco} sufijo=" mm" /> : <span className="delta">—</span>}
                     </td>
-                    <td className="num">{Math.round(n.presion)} PSI</td>
+                    <td className="num">
+                      {Math.round(n.presion)} PSI
+                      {n.presionBajoEstandar && (
+                        <span
+                          className="marca-reg"
+                          title={n.regulada
+                            ? 'Llegó bajo estándar y se reguló en la inspección'
+                            : 'Llegó bajo estándar y NO se reguló'}
+                          style={{ color: n.regulada ? 'var(--good)' : 'var(--critical)' }}
+                        >
+                          {n.regulada ? ' ✓reg' : ' ▲'}
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <span style={{ color: COLOR_ESTADO[n.nivel], fontWeight: 600 }}>
                         {est.icono} {est.etiqueta}
@@ -178,11 +197,17 @@ function FilaInspeccion({ insp, previa, abierta, onToggle, indice, total }) {
               })}
             </tbody>
           </table>
-          {!previa && (
-            <p className="nota">
-              Es la inspección más antigua registrada: no hay una anterior con que comparar.
-            </p>
-          )}
+          <p className="nota">
+            Tipo: <strong>N</strong> original · <strong>R</strong> recauchado.
+            {insp.regularizadas > 0 && (
+              <> · <strong>{insp.regularizadas}</strong>{' '}
+              {insp.regularizadas === 1
+                ? 'llegó con la presión baja y se regularizó'
+                : 'llegaron con la presión baja y se regularizaron'} en terreno
+              (<span style={{ color: 'var(--good)' }}>✓reg</span>).</>
+            )}
+            {!previa && ' · Es la inspección más antigua registrada: no hay una anterior con que comparar.'}
+          </p>
         </div>
       )}
     </li>

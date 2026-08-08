@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { meta, centros, ACTUAL as actual, EQUIPOS as TODOS_EQUIPOS, seriePorCd } from './datos.js'
+import { meta, centros, ACTUAL as actual, EQUIPOS as TODOS_EQUIPOS, seriePorCd, TIPOS } from './datos.js'
 import { ESTADOS, colorSurco, colorPresion, fmt } from './estados.js'
 import { filtrar, agregar } from './agregar.js'
 import BarraFiltros from './components/BarraFiltros.jsx'
@@ -15,6 +15,8 @@ function fecha(iso) {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
 }
+
+const ETIQUETA_TIPO = Object.fromEntries(TIPOS.map((t) => [t.clave, t.etiqueta]))
 
 function Tile({ label, value, hint, color, pct }) {
   return (
@@ -109,8 +111,9 @@ export default function App() {
               <Tile label="Advertencia" value={fmt(a.advertencia)} hint={`${a.pctAdv}% · surco ≤ 6 mm`} color="var(--warning)" pct={a.pctAdv} />
               <Tile label="Óptimos" value={fmt(a.bueno)} hint={`${a.pctBueno}% de los vigentes`} color="var(--good)" pct={a.pctBueno} />
               <Tile label="Surco crítico" value={fmt(a.surcoCritico)} hint="< 2,5 mm — cambio inmediato" color="var(--critical)" />
-              <Tile label="Presión crítica" value={fmt(a.presionCritica)} hint="< 95 PSI" color="var(--serious)" />
-              <Tile label="Promedios" value={`${a.surcoPromedio} mm`} hint={`${fmt(a.presionPromedio)} PSI de presión media`} />
+              <Tile label="Presión sin regularizar" value={fmt(a.presionCritica)} hint="< 95 PSI y no se corrigió" color="var(--serious)" />
+              <Tile label="Presión regularizada" value={fmt(a.presionRegularizada)} hint="llegó baja y se corrigió en terreno" color="var(--good)" />
+              <Tile label="Promedios" value={`${a.surcoPromedio} mm`} hint={`${fmt(a.presionPromedio)} PSI de presión al llegar`} />
             </div>
           </section>
 
@@ -165,6 +168,20 @@ export default function App() {
             </section>
           )}
 
+          {/* ------------------------------------------------ original vs recauchado */}
+          <section>
+            <div className="sec-head">
+              <h2>Original vs recauchado</h2>
+              <p>
+                Los neumáticos recauchados se desgastan distinto, así que se miran aparte.
+                El dato viene de la columna «ORIGINAL» de la planilla de inspección.
+              </p>
+            </div>
+            <div className="card">
+              <BarrasApiladas datos={a.porTipo.map((t) => ({ ...t, nombre: ETIQUETA_TIPO[t.tipo] }))} campoNombre="nombre" />
+            </div>
+          </section>
+
           {/* ------------------------------------------------ distribuciones */}
           <section>
             <div className="sec-head">
@@ -180,8 +197,9 @@ export default function App() {
                 <Histograma datos={a.distSurco} colorDe={colorSurco} unidad="mm" total={a.vigentes} />
               </div>
               <div className="card">
-                <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Presión medida (PSI)</h3>
+                <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Presión al llegar (PSI)</h3>
                 <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
+                  Cómo se encontró el neumático, antes de regularizar.
                   Recomendada 100 PSI (dirección 115) · tolerancia 5 PSI
                 </p>
                 <Histograma datos={a.distPresion} colorDe={colorPresion} unidad="PSI" total={a.vigentes} />
@@ -269,8 +287,14 @@ export default function App() {
 
       <footer className="foot">
         <p>
-          <strong>Criterios.</strong> Riesgo: surco bajo el mínimo del equipo (3 mm) o presión bajo lo
-          recomendado menos 5 PSI. Advertencia: surco ≤ 6 mm estando sobre el mínimo. Óptimo: el resto.
+          <strong>Criterios.</strong> Riesgo: surco bajo el mínimo del equipo (3 mm), o presión bajo lo
+          recomendado menos 5 PSI <strong>sin que se haya regularizado</strong> en la inspección.
+          Advertencia: surco ≤ 6 mm estando sobre el mínimo. Óptimo: el resto.
+        </p>
+        <p>
+          Cuando el inspector regula la presión, el neumático sale en su estándar, así que no arrastra
+          un riesgo vigente: la presión registrada es la que tenía <em>al llegar</em> y se contabiliza
+          aparte, en «presión regularizada». En esta base eso ocurre en la enorme mayoría de los casos.
         </p>
         <p>
           Los indicadores consideran solo la última inspección de cada equipo, para reflejar la situación
