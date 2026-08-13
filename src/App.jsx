@@ -5,6 +5,7 @@ import { filtrar, agregar } from './agregar.js'
 import BarraFiltros from './components/BarraFiltros.jsx'
 import BarrasH from './components/BarrasH.jsx'
 import BarrasApiladas from './components/BarrasApiladas.jsx'
+import Descargas from './components/Descargas.jsx'
 import FichaEquipo from './components/FichaEquipo.jsx'
 import Histograma from './components/Histograma.jsx'
 import Linea from './components/Linea.jsx'
@@ -75,7 +76,15 @@ export default function App() {
           las tendencias usan el histórico completo.
         </p>
         <span className="periodo">📅 {fecha(meta.desde)} → {fecha(meta.hasta)}</span>
+        <Descargas cd={cd} q={q} />
       </header>
+
+      {/* Solo en el PDF: deja constancia de qué se está viendo. */}
+      <p className="solo-print">
+        {cd ? `Centro: ${cd}. ` : 'Todos los centros. '}
+        {q.trim() ? `Patente: ${q.trim().toUpperCase()}. ` : ''}
+        Datos al {fecha(meta.hasta)}.
+      </p>
 
       <BarraFiltros
         centros={centros}
