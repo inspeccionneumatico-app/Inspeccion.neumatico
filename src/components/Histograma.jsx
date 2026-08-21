@@ -5,7 +5,7 @@ import { useTooltip, Tooltip, TtFila } from './Tooltip.jsx'
  * los cortes son umbrales de negocio (surco/presión), acompañados siempre de
  * etiqueta de rango y del valor, de modo que el color no es el único canal.
  */
-export default function Histograma({ datos, colorDe, unidad = '', total }) {
+export default function Histograma({ datos, colorDe, unidad = '', total, onSelect }) {
   const { tt, show, hide } = useTooltip()
   if (!datos?.length) return null
 
@@ -22,6 +22,14 @@ export default function Histograma({ datos, colorDe, unidad = '', total }) {
           return (
             <div
               key={d.rango}
+              className={onSelect ? 'clic-marca' : undefined}
+              role={onSelect ? 'button' : undefined}
+              tabIndex={onSelect && d.cantidad > 0 ? 0 : undefined}
+              aria-label={onSelect ? `Ver el detalle de ${d.cantidad} mediciones en ${d.rango} ${unidad}` : undefined}
+              onClick={onSelect && d.cantidad > 0 ? () => onSelect(d) : undefined}
+              onKeyDown={onSelect && d.cantidad > 0 ? (ev) => {
+                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSelect(d) }
+              } : undefined}
               style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 5, height: '100%' }}
               onMouseMove={(e) =>
                 show(e, (
@@ -29,6 +37,7 @@ export default function Histograma({ datos, colorDe, unidad = '', total }) {
                     <div className="tt-t">{d.rango} {unidad}</div>
                     <TtFila color={color} nombre="Neumáticos" valor={d.cantidad.toLocaleString('es-CL')} />
                     {pct !== null && <TtFila nombre="Del total" valor={`${pct}%`} />}
+                    {onSelect && d.cantidad > 0 && <div className="tt-clic">Clic para ver el detalle</div>}
                   </>
                 ))
               }

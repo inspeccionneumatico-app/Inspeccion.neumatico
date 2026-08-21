@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { meta, centros, ACTUAL as actual, EQUIPOS as TODOS_EQUIPOS, seriePorCd, TIPOS } from './datos.js'
+import { meta, centros, ACTUAL as actual, EQUIPOS as TODOS_EQUIPOS, seriePorCd, TIPOS, todasLasMediciones } from './datos.js'
 import { ESTADOS, colorSurco, colorPresion, fmt } from './estados.js'
-import { filtrar, agregar } from './agregar.js'
+import { filtrar, agregar, enBinSurco, enBinPresion } from './agregar.js'
 import BarraFiltros from './components/BarraFiltros.jsx'
 import BarrasH from './components/BarrasH.jsx'
 import BarrasApiladas from './components/BarrasApiladas.jsx'
 import Descargas from './components/Descargas.jsx'
+import DetalleSeleccion from './components/DetalleSeleccion.jsx'
 import FichaEquipo from './components/FichaEquipo.jsx'
 import Histograma from './components/Histograma.jsx'
 import Linea from './components/Linea.jsx'
@@ -19,7 +20,28 @@ function fecha(iso) {
 
 const ETIQUETA_TIPO = Object.fromEntries(TIPOS.map((t) => [t.clave, t.etiqueta]))
 
-function Tile({ label, value, hint, color, pct }) {
+function Tile({ label, value, hint, color, pct, onClick }) {
+  // Con onClick el indicador pasa a ser un boton: abre el detalle de las
+  // mediciones que lo formaron.
+  if (onClick) {
+    return (
+      <button
+        className="card tile tile-clic"
+        onClick={onClick}
+        aria-label={`${label}: ${value}. Ver el detalle`}
+      >
+        <span className="label">{label}</span>
+        <span className="value" style={color ? { color } : undefined}>{value}</span>
+        {pct != null && (
+          <span className="bar-mini" aria-hidden="true">
+            <i style={{ width: `${pct}%`, background: color || 'var(--accent)' }} />
+          </span>
+        )}
+        {hint && <span className="hint">{hint}</span>}
+        <span className="tile-lupa" aria-hidden="true">ver detalle →</span>
+      </button>
+    )
+  }
   return (
     <div className="card tile">
       <span className="label">{label}</span>
@@ -39,6 +61,8 @@ export default function App() {
   const [q, setQ] = useState('')
   // Equipo cuyo historial se está mirando (null = ficha cerrada).
   const [ficha, setFicha] = useState(null)
+  // Selección de un gráfico: las filas que lo formaron (null = cerrado).
+  const [detalle, setDetalle] = useState(null)
 
   // Equipos por centro (para el conteo de los chips), fijo.
   const conteosCd = useMemo(() => {
@@ -62,6 +86,38 @@ export default function App() {
 
   // La tendencia usa el histórico completo del centro elegido.
   const serie = seriePorCd[cd ?? 'TODOS'] ?? []
+
+  // --- Bajar al detalle desde cualquier gráfico -------------------------
+  // Cada gráfico avisa qué se tocó; acá se traduce a las mediciones que lo
+  // formaron y se abren en el panel.
+  const termino = q.trim().toUpperCase()
+  const contexto = [cd, termino && `patente ${termino}`].filter(Boolean).join(' · ')
+
+  const abrir = (titulo, criterio, base = filas) =>
+    setDetalle({
+      titulo,
+      descripcion: [criterio, contexto].filter(Boolean).join(' — '),
+      filas: base,
+    })
+
+  const abrirDonde = (titulo, criterio, predicado, base = filas) =>
+    abrir(titulo, criterio, base.filter(predicado))
+
+  // El histórico completo se arma solo cuando hace falta (clic en la tendencia).
+  const abrirMes = (punto) => {
+    const delMes = todasLasMediciones().filter(
+      (f) => f.f.slice(0, 7) === punto.mes && (!cd || f.c === cd),
+    )
+    abrir(`Inspecciones de ${punto.mes}`, `${punto.inspecciones} inspecciones del mes`, delMes)
+  }
+
+  const verEquipo = (patente) => {
+    const equipo = TODOS_EQUIPOS.find((e) => e.patente === patente)
+    if (equipo) {
+      setDetalle(null)
+      setFicha(equipo)
+    }
+  }
 
   const sinResultados = a.vigentes === 0
 
@@ -114,15 +170,48 @@ export default function App() {
               <p>Estado actual según la última inspección registrada de cada equipo.</p>
             </div>
             <div className="grid g-tiles">
-              <Tile label="Equipos" value={fmt(a.equipos)} hint={cd ? `en ${cd}` : 'toda la flota'} />
-              <Tile label="Neumáticos vigentes" value={fmt(a.vigentes)} hint="en servicio hoy" />
-              <Tile label="En riesgo" value={fmt(a.riesgo)} hint={`${a.pctRiesgo}% de los vigentes`} color="var(--critical)" pct={a.pctRiesgo} />
-              <Tile label="Advertencia" value={fmt(a.advertencia)} hint={`${a.pctAdv}% · surco ≤ 6 mm`} color="var(--warning)" pct={a.pctAdv} />
-              <Tile label="Óptimos" value={fmt(a.bueno)} hint={`${a.pctBueno}% de los vigentes`} color="var(--good)" pct={a.pctBueno} />
-              <Tile label="Surco crítico" value={fmt(a.surcoCritico)} hint="< 2,5 mm — cambio inmediato" color="var(--critical)" />
-              <Tile label="Presión sin regularizar" value={fmt(a.presionCritica)} hint="< 95 PSI y no se corrigió" color="var(--serious)" />
-              <Tile label="Presión regularizada" value={fmt(a.presionRegularizada)} hint="llegó baja y se corrigió en terreno" color="var(--good)" />
-              <Tile label="Promedios" value={`${a.surcoPromedio} mm`} hint={`${fmt(a.presionPromedio)} PSI de presión al llegar`} />
+              <Tile
+                label="Equipos" value={fmt(a.equipos)} hint={cd ? `en ${cd}` : 'toda la flota'}
+                onClick={() => abrir('Todos los equipos', `${a.equipos} equipos con inspección vigente`)}
+              />
+              <Tile
+                label="Neumáticos vigentes" value={fmt(a.vigentes)} hint="en servicio hoy"
+                onClick={() => abrir('Neumáticos vigentes', 'la última inspección de cada equipo')}
+              />
+              <Tile
+                label="En riesgo" value={fmt(a.riesgo)} hint={`${a.pctRiesgo}% de los vigentes`}
+                color="var(--critical)" pct={a.pctRiesgo}
+                onClick={() => abrirDonde('Neumáticos en riesgo', 'bajo el mínimo de surco, o presión baja sin regularizar', (f) => f.n === 'riesgo')}
+              />
+              <Tile
+                label="Advertencia" value={fmt(a.advertencia)} hint={`${a.pctAdv}% · surco ≤ 6 mm`}
+                color="var(--warning)" pct={a.pctAdv}
+                onClick={() => abrirDonde('Neumáticos en advertencia', 'surco ≤ 6 mm, todavía sobre el mínimo', (f) => f.n === 'advertencia')}
+              />
+              <Tile
+                label="Óptimos" value={fmt(a.bueno)} hint={`${a.pctBueno}% de los vigentes`}
+                color="var(--good)" pct={a.pctBueno}
+                onClick={() => abrirDonde('Neumáticos óptimos', 'sobre el mínimo de surco y con la presión en norma', (f) => f.n === 'bueno')}
+              />
+              <Tile
+                label="Surco crítico" value={fmt(a.surcoCritico)} hint="< 2,5 mm — cambio inmediato"
+                color="var(--critical)"
+                onClick={() => abrirDonde('Surco crítico', 'menos de 2,5 mm: cambio inmediato', (f) => f.s < 2.5)}
+              />
+              <Tile
+                label="Presión sin regularizar" value={fmt(a.presionCritica)} hint="< 95 PSI y no se corrigió"
+                color="var(--serious)"
+                onClick={() => abrirDonde('Presión sin regularizar', 'bajo 95 PSI y no se corrigió en la inspección', (f) => f.r < 95 && !f.reg)}
+              />
+              <Tile
+                label="Presión regularizada" value={fmt(a.presionRegularizada)} hint="llegó baja y se corrigió en terreno"
+                color="var(--good)"
+                onClick={() => abrirDonde('Presión regularizada en terreno', 'llegaron bajo estándar y el inspector las corrigió', (f) => f.r < f.rr - 5 && f.reg)}
+              />
+              <Tile
+                label="Promedios" value={`${a.surcoPromedio} mm`} hint={`${fmt(a.presionPromedio)} PSI de presión al llegar`}
+                onClick={() => abrir('Promedios', 'todas las mediciones vigentes que entran en el promedio')}
+              />
             </div>
           </section>
 
@@ -147,10 +236,21 @@ export default function App() {
                   a[e.clave] > 0 ? (
                     <i
                       key={e.clave}
-                      title={`${e.etiqueta}: ${fmt(a[e.clave])}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${e.etiqueta}: ${fmt(a[e.clave])}. Ver el detalle`}
+                      title={`${e.etiqueta}: ${fmt(a[e.clave])} — clic para ver el detalle`}
+                      onClick={() => abrirDonde(`Neumáticos en ${e.etiqueta.toLowerCase()}`, 'de la composición del estado actual', (f) => f.n === e.clave)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter' || ev.key === ' ') {
+                          ev.preventDefault()
+                          abrirDonde(`Neumáticos en ${e.etiqueta.toLowerCase()}`, 'de la composición del estado actual', (f) => f.n === e.clave)
+                        }
+                      }}
                       style={{
                         flex: `${a[e.clave]} 0 0`,
                         background: e.color,
+                        cursor: 'pointer',
                         borderRadius: i === 0 ? '4px 0 0 4px' : i === ESTADOS.length - 1 ? '0 4px 4px 0' : 0,
                       }}
                     />
@@ -160,6 +260,7 @@ export default function App() {
               <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-2)' }}>
                 <strong style={{ color: 'var(--critical)' }}>▲ {a.pctRiesgo}%</strong> de los neumáticos en
                 servicio está bajo el estándar de surco o de presión y requiere atención.
+                {' '}<span className="pista-clic">Toca un tramo de la barra para ver esos neumáticos.</span>
               </p>
             </div>
           </section>
@@ -169,10 +270,23 @@ export default function App() {
             <section>
               <div className="sec-head">
                 <h2>Por centro de distribución</h2>
-                <p>Volumen y condición de los neumáticos en servicio de cada centro.</p>
+                <p>
+                  Volumen y condición de los neumáticos en servicio de cada centro.
+                  {' '}<span className="pista-clic">Toca un centro, o un color, para ver el detalle.</span>
+                </p>
               </div>
               <div className="card">
-                <BarrasApiladas datos={a.porCentro} campoNombre="cd" />
+                <BarrasApiladas
+                  datos={a.porCentro}
+                  campoNombre="cd"
+                  onSelect={(d, estado) =>
+                    abrirDonde(
+                      estado ? `${d.cd} · ${ESTADOS.find((e) => e.clave === estado).etiqueta}` : d.cd,
+                      estado ? 'neumáticos de ese centro en ese estado' : 'todos los neumáticos vigentes del centro',
+                      (f) => f.c === d.cd && (!estado || f.n === estado),
+                    )
+                  }
+                />
               </div>
             </section>
           )}
@@ -184,10 +298,21 @@ export default function App() {
               <p>
                 Los neumáticos recauchados se desgastan distinto, así que se miran aparte.
                 El dato viene de la columna «ORIGINAL» de la planilla de inspección.
+                {' '}<span className="pista-clic">Toca un tipo, o un color, para ver el detalle.</span>
               </p>
             </div>
             <div className="card">
-              <BarrasApiladas datos={a.porTipo.map((t) => ({ ...t, nombre: ETIQUETA_TIPO[t.tipo] }))} campoNombre="nombre" />
+              <BarrasApiladas
+                datos={a.porTipo.map((t) => ({ ...t, nombre: ETIQUETA_TIPO[t.tipo] }))}
+                campoNombre="nombre"
+                onSelect={(d, estado) =>
+                  abrirDonde(
+                    estado ? `${d.nombre} · ${ESTADOS.find((e) => e.clave === estado).etiqueta}` : d.nombre,
+                    estado ? 'de ese tipo y en ese estado' : 'todos los neumáticos vigentes de ese tipo',
+                    (f) => f.t === d.tipo && (!estado || f.n === estado),
+                  )
+                }
+              />
             </div>
           </section>
 
@@ -195,7 +320,10 @@ export default function App() {
           <section>
             <div className="sec-head">
               <h2>Distribución de mediciones</h2>
-              <p>Cómo se reparten las mediciones de los neumáticos vigentes. El color marca la zona de riesgo.</p>
+              <p>
+                Cómo se reparten las mediciones de los neumáticos vigentes. El color marca la zona de riesgo.
+                {' '}<span className="pista-clic">Toca una columna para ver qué neumáticos la forman.</span>
+              </p>
             </div>
             <div className="grid g-2">
               <div className="card">
@@ -203,7 +331,12 @@ export default function App() {
                 <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
                   Mínimo legal 3 mm · advertencia desde 6 mm
                 </p>
-                <Histograma datos={a.distSurco} colorDe={colorSurco} unidad="mm" total={a.vigentes} />
+                <Histograma
+                  datos={a.distSurco} colorDe={colorSurco} unidad="mm" total={a.vigentes}
+                  onSelect={(bin) =>
+                    abrirDonde(`Surco ${bin.rango} mm`, 'neumáticos cuyo surco cae en ese rango', (f) => enBinSurco(f.s, bin.rango))
+                  }
+                />
               </div>
               <div className="card">
                 <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Presión al llegar (PSI)</h3>
@@ -211,7 +344,12 @@ export default function App() {
                   Cómo se encontró el neumático, antes de regularizar.
                   Recomendada 100 PSI (dirección 115) · tolerancia 5 PSI
                 </p>
-                <Histograma datos={a.distPresion} colorDe={colorPresion} unidad="PSI" total={a.vigentes} />
+                <Histograma
+                  datos={a.distPresion} colorDe={colorPresion} unidad="PSI" total={a.vigentes}
+                  onSelect={(bin) =>
+                    abrirDonde(`Presión ${bin.rango} PSI`, 'presión con que llegaron, antes de regularizar', (f) => enBinPresion(f.r, bin.rango))
+                  }
+                />
               </div>
             </div>
           </section>
@@ -223,12 +361,13 @@ export default function App() {
               <p>
                 Actividad de inspección y desgaste promedio mes a mes ({serie.length} meses con registros).
                 Sigue el filtro de centro; la búsqueda por patente no la altera.
+                {' '}<span className="pista-clic">Toca un mes para ver sus inspecciones.</span>
               </p>
             </div>
             <div className="grid g-2">
               <div className="card">
                 <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Inspecciones por mes</h3>
-                <Linea datos={serie} campoY="inspecciones" etiquetaY="Inspecciones" colorHex="#2a78d6" />
+                <Linea datos={serie} campoY="inspecciones" etiquetaY="Inspecciones" colorHex="#2a78d6" onSelect={abrirMes} />
               </div>
               <div className="card">
                 <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Surco promedio medido (mm)</h3>
@@ -240,6 +379,7 @@ export default function App() {
                   referencia={3}
                   etiquetaReferencia="mínimo 3 mm"
                   sufijo=" mm"
+                  onSelect={abrirMes}
                 />
               </div>
             </div>
@@ -250,10 +390,16 @@ export default function App() {
             <section>
               <div className="sec-head">
                 <h2>Equipos que requieren atención</h2>
-                <p>Los {a.criticos.length} equipos con más neumáticos fuera de estándar en su última inspección.</p>
+                <p>
+                  Los {a.criticos.length} equipos con más neumáticos fuera de estándar en su última inspección.
+                  {' '}<span className="pista-clic">Toca uno para abrir su historial.</span>
+                </p>
               </div>
               <div className="card">
-                <BarrasH datos={a.criticos} color="var(--critical)" anchoEtiqueta={190} />
+                <BarrasH
+                  datos={a.criticos} color="var(--critical)" anchoEtiqueta={190}
+                  onSelect={(d) => verEquipo(d.clave)}
+                />
               </div>
             </section>
           )}
@@ -262,16 +408,25 @@ export default function App() {
           <section>
             <div className="sec-head">
               <h2>Marcas y medidas en servicio</h2>
-              <p>Distribución de los neumáticos vigentes.</p>
+              <p>
+                Distribución de los neumáticos vigentes.
+                {' '}<span className="pista-clic">Toca una barra para ver el detalle.</span>
+              </p>
             </div>
             <div className="grid g-2">
               <div className="card">
                 <h3 style={{ margin: '0 0 14px', fontSize: 14 }}>Marcas más usadas</h3>
-                <BarrasH datos={a.marcas} />
+                <BarrasH
+                  datos={a.marcas}
+                  onSelect={(d) => abrirDonde(`Marca ${d.nombre}`, 'neumáticos vigentes de esa marca', (f) => f.m === d.nombre)}
+                />
               </div>
               <div className="card">
                 <h3 style={{ margin: '0 0 14px', fontSize: 14 }}>Medidas más usadas</h3>
-                <BarrasH datos={a.medidas} anchoEtiqueta={130} />
+                <BarrasH
+                  datos={a.medidas} anchoEtiqueta={130}
+                  onSelect={(d) => abrirDonde(`Medida ${d.nombre}`, 'neumáticos vigentes de esa medida', (f) => f.d === d.nombre)}
+                />
               </div>
             </div>
           </section>
@@ -290,6 +445,16 @@ export default function App() {
             </div>
           </section>
         </>
+      )}
+
+      {detalle && (
+        <DetalleSeleccion
+          titulo={detalle.titulo}
+          descripcion={detalle.descripcion}
+          filas={detalle.filas}
+          onCerrar={() => setDetalle(null)}
+          onVerEquipo={verEquipo}
+        />
       )}
 
       {ficha && <FichaEquipo equipo={ficha} onCerrar={() => setFicha(null)} />}

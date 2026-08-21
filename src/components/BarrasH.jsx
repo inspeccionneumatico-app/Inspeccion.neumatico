@@ -5,7 +5,7 @@ import { useTooltip, Tooltip, TtFila } from './Tooltip.jsx'
  * Un solo tono secuencial; extremo redondeado 4px anclado a la línea base;
  * etiqueta de valor directa en cada barra (no hay eje X redundante).
  */
-export default function BarrasH({ datos, campoNombre = 'nombre', campoValor = 'cantidad', sufijo = '', color = 'var(--seq-450)', anchoEtiqueta = 108 }) {
+export default function BarrasH({ datos, campoNombre = 'nombre', campoValor = 'cantidad', sufijo = '', color = 'var(--seq-450)', anchoEtiqueta = 108, onSelect }) {
   const { tt, show, hide } = useTooltip()
   if (!datos?.length) return null
 
@@ -20,12 +20,21 @@ export default function BarrasH({ datos, campoNombre = 'nombre', campoValor = 'c
           return (
             <div
               key={d[campoNombre]}
+              className={onSelect ? 'clic-marca' : undefined}
+              role={onSelect ? 'button' : undefined}
+              tabIndex={onSelect ? 0 : undefined}
+              aria-label={onSelect ? `Ver el detalle de ${d[campoNombre]}` : undefined}
+              onClick={onSelect ? () => onSelect(d) : undefined}
+              onKeyDown={onSelect ? (ev) => {
+                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSelect(d) }
+              } : undefined}
               style={{ display: 'grid', gridTemplateColumns: `${anchoEtiqueta}px 1fr auto`, alignItems: 'center', gap: 10 }}
               onMouseMove={(e) =>
                 show(e, (
                   <>
                     <div className="tt-t">{d[campoNombre]}</div>
                     <TtFila color={color} nombre="Cantidad" valor={`${d[campoValor].toLocaleString('es-CL')}${sufijo}`} />
+                    {onSelect && <div className="tt-clic">Clic para ver el detalle</div>}
                   </>
                 ))
               }

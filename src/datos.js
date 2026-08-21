@@ -92,6 +92,40 @@ export function historialDe(patente) {
 }
 
 /**
+ * TODAS las mediciones del histórico, con la misma forma que `ACTUAL` más la
+ * fecha de la inspección. Se arma una sola vez, cuando algún gráfico necesita
+ * bajar al detalle de un mes.
+ */
+let _todas = null
+export function todasLasMediciones() {
+  if (_todas) return _todas
+  _todas = []
+  for (const [patente, insps] of Object.entries(datos.hist)) {
+    for (const insp of insps) {
+      for (const t of insp.t) {
+        const regulada = t[REGULADA] === 1
+        _todas.push({
+          p: patente,
+          c: insp.c,
+          f: insp.f,
+          o: t[POS],
+          m: CAT_MARCAS[t[MARCA]],
+          d: CAT_MEDIDAS[t[MEDIDA]],
+          t: TIPOS[t[TIPO]]?.clave ?? 'sinDato',
+          s: t[SURCO],
+          sm: t[SURCO_MIN],
+          r: t[PRESION],
+          rr: t[PRESION_REC],
+          reg: regulada,
+          n: nivelDe(t[SURCO], t[SURCO_MIN], t[PRESION], t[PRESION_REC], regulada),
+        })
+      }
+    }
+  }
+  return _todas
+}
+
+/**
  * Estado actual: una fila por neumático de la última inspección de cada equipo.
  * Es la entrada de `agregar.js`, con las claves cortas que ese módulo espera.
  */

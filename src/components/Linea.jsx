@@ -16,6 +16,7 @@ export default function Linea({
   referencia = null,
   etiquetaReferencia = '',
   sufijo = '',
+  onSelect,
 }) {
   const [idx, setIdx] = useState(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
@@ -44,7 +45,9 @@ export default function Linea({
   const ticks = 4
   const marcasY = Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks)
 
-  function mover(e) {
+  /** Punto más cercano al cursor. Se calcula en cada evento y no depende del
+   *  hover: así el clic también funciona al primer toque en un teléfono. */
+  function indiceDe(e) {
     const r = ref.current.getBoundingClientRect()
     const xRel = ((e.clientX - r.left) / r.width) * W
     let mejor = 0, dmin = Infinity
@@ -52,7 +55,11 @@ export default function Linea({
       const d = Math.abs(px(i) - xRel)
       if (d < dmin) { dmin = d; mejor = i }
     })
-    setIdx(mejor)
+    return mejor
+  }
+
+  function mover(e) {
+    setIdx(indiceDe(e))
     setPos({ x: e.clientX, y: e.clientY })
   }
 
@@ -67,6 +74,8 @@ export default function Linea({
         aria-label={`${etiquetaY} por mes`}
         onMouseMove={mover}
         onMouseLeave={() => setIdx(null)}
+        onClick={onSelect ? (e) => onSelect(datos[indiceDe(e)]) : undefined}
+        cursor={onSelect ? 'pointer' : undefined}
         style={{ width: '100%', height: 'auto' }}
       >
         {marcasY.map((v, k) => (
@@ -129,6 +138,7 @@ export default function Linea({
                 <TtFila color={colorHex} nombre={etiquetaY} valor={`${activo[campoY].toLocaleString('es-CL')}${sufijo}`} />
                 <TtFila nombre="Inspecciones" valor={activo.inspecciones?.toLocaleString('es-CL') ?? '—'} />
                 <TtFila nombre="Neumáticos" valor={activo.neumaticos?.toLocaleString('es-CL') ?? '—'} />
+                {onSelect && <div className="tt-clic">Clic para ver el detalle del mes</div>}
               </>
             ),
           }}

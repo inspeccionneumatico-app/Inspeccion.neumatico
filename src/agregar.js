@@ -10,6 +10,20 @@ const ETIQ_SURCO = ['< 2,5', '2,5–4', '4–6', '6–8', '8–10', '10–12', '
 const BORDES_PRESION = [80, 90, 95, 100, 105, 110, Infinity]
 const ETIQ_PRESION = ['< 80', '80–90', '90–95', '95–100', '100–105', '105–110', '> 110']
 
+/**
+ * ¿El valor cae en el bin etiquetado `etiqueta`? Se usa al hacer clic en una
+ * columna del histograma para quedarse con las filas que la formaron.
+ */
+function enBin(valor, etiqueta, bordes, etiquetas) {
+  const i = etiquetas.indexOf(etiqueta)
+  if (i < 0) return false
+  const desde = i === 0 ? -Infinity : bordes[i - 1]
+  return valor >= desde && valor < bordes[i]
+}
+
+export const enBinSurco = (v, etiqueta) => enBin(v, etiqueta, BORDES_SURCO, ETIQ_SURCO)
+export const enBinPresion = (v, etiqueta) => enBin(v, etiqueta, BORDES_PRESION, ETIQ_PRESION)
+
 function histograma(valores, bordes, etiquetas) {
   const cuentas = new Array(etiquetas.length).fill(0)
   for (const v of valores) {
@@ -115,7 +129,7 @@ export function agregar(filas) {
     .filter((e) => e.riesgo > 0)
     .sort((a, b) => b.riesgo - a.riesgo || prom(a.surco) - prom(b.surco))
     .slice(0, 12)
-    .map((e) => ({ nombre: `${e.p} · ${e.c}`, cantidad: e.riesgo }))
+    .map((e) => ({ nombre: `${e.p} · ${e.c}`, clave: e.p, cantidad: e.riesgo }))
 
   return {
     vigentes,

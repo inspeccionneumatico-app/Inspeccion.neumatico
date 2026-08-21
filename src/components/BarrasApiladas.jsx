@@ -7,7 +7,7 @@ import { ESTADOS } from '../estados.js'
  * etiqueta directa del total. La identidad nunca depende solo del color:
  * siempre hay leyenda y el detalle está en la tabla.
  */
-export default function BarrasApiladas({ datos, campoNombre, mostrarPct = true }) {
+export default function BarrasApiladas({ datos, campoNombre, mostrarPct = true, onSelect }) {
   const { tt, show, hide } = useTooltip()
   if (!datos?.length) return null
 
@@ -30,8 +30,17 @@ export default function BarrasApiladas({ datos, campoNombre, mostrarPct = true }
           const total = totales[i]
           const pctRiesgo = total ? Math.round((d.riesgo / total) * 100) : 0
           return (
-            <div key={d[campoNombre]}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div key={d[campoNombre]} className={onSelect ? 'clic-marca' : undefined}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, cursor: onSelect ? 'pointer' : undefined }}
+                role={onSelect ? 'button' : undefined}
+                tabIndex={onSelect ? 0 : undefined}
+                aria-label={onSelect ? `Ver el detalle de ${d[campoNombre]}` : undefined}
+                onClick={onSelect ? () => onSelect(d, null) : undefined}
+                onKeyDown={onSelect ? (ev) => {
+                  if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSelect(d, null) }
+                } : undefined}
+              >
                 <span className="cat-label" style={{ fontWeight: 600 }}>{d[campoNombre]}</span>
                 <span className="val-label">
                   {total.toLocaleString('es-CL')} neum.
@@ -58,7 +67,11 @@ export default function BarrasApiladas({ datos, campoNombre, mostrarPct = true }
                         borderBottomLeftRadius: esPrimero ? 4 : 0,
                         borderTopRightRadius: esUltimo ? 4 : 0,
                         borderBottomRightRadius: esUltimo ? 4 : 0,
+                        cursor: onSelect ? 'pointer' : undefined,
                       }}
+                      role={onSelect ? 'button' : undefined}
+                      aria-label={onSelect ? `${d[campoNombre]}: ver los ${v} en ${e.etiqueta}` : undefined}
+                      onClick={onSelect ? () => onSelect(d, e.clave) : undefined}
                       onMouseMove={(ev) =>
                         show(ev, (
                           <>
@@ -72,6 +85,7 @@ export default function BarrasApiladas({ datos, campoNombre, mostrarPct = true }
                               />
                             ))}
                             <TtFila nombre="Total" valor={total.toLocaleString('es-CL')} />
+                            {onSelect && <div className="tt-clic">Clic en un color para ver solo esos</div>}
                           </>
                         ))
                       }
