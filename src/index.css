@@ -384,10 +384,22 @@ footer.foot {
 @media print {
   @page { size: A4 portrait; margin: 12mm 10mm; }
 
+  /* Los gráficos de barras son fondos de color, y al imprimir el navegador
+     los descarta por defecto (es la casilla "Gráficos de fondo" del diálogo).
+     Sin esto, las barras salen en blanco y el PDF parece no tener gráficos. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Paleta clara completa: si el navegador está en modo oscuro, los tokens de
+     acento y de la escala azul seguirían con los valores oscuros. */
   :root, :root[data-theme="dark"] {
     --plane: #fff; --surface: #fff; --ink: #000; --ink-2: #333;
     --ink-muted: #555; --grid: #ddd; --axis: #999;
     --border: rgba(0,0,0,.18); --shadow: none;
+    --seq-100: #cde2fb; --seq-250: #86b6ef; --seq-450: #2a78d6;
+    --seq-600: #184f95; --accent: #2a78d6;
     color-scheme: light;
   }
 
@@ -398,6 +410,11 @@ footer.foot {
   .solo-print { display: block; font-size: 12px; color: #333; margin: 4px 0 0; }
 
   .card { box-shadow: none; border: 1px solid #ddd; }
+  .tile-clic { appearance: none; background: #fff; }
+
+  /* Que ningun grafico se recorte ni se lo trague un contenedor. */
+  svg { max-width: 100%; height: auto; }
+  .mini-stack, .bar-mini { overflow: visible; }
 
   /* Nada de cortes a media tarjeta, gráfico o encabezado. */
   section, .card, svg, .insp { break-inside: avoid; page-break-inside: avoid; }
