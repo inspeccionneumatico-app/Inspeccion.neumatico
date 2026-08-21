@@ -92,6 +92,7 @@ if ($SinDatos) {
 } else {
     Paso 1 'Datos'
 
+    $baseRegenerada = $false
     $seed = Join-Path $APP 'assets\seed\seed.db'
     $planilla = Get-ChildItem (Join-Path $APP '*.xlsx') -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending |
@@ -103,6 +104,7 @@ if ($SinDatos) {
         # La planilla cambio desde la ultima vez: hay que rearmar la base.
         Write-Host "    Planilla mas nueva que la base: $($planilla.Name)"
         Correr $python @('tool\generar_seed_db.py', $planilla.FullName) $APP
+        $baseRegenerada = $true
         Ok 'Base regenerada desde la planilla'
     } else {
         Ok "La base ya esta al dia con $($planilla.Name)"
@@ -127,6 +129,28 @@ Ok 'Compilado en docs\'
 $indice = Get-Content (Join-Path $REPORTE 'docs\index.html') -Raw
 $huella = [regex]::Match($indice, 'index-[A-Za-z0-9_-]+\.js').Value
 if ($huella) { Write-Host "    version: $huella" }
+
+# ------------------------------------------------- 2b. guardar la base en la app
+
+# Si se regenero la base, quedo modificada dentro del proyecto de la app. Se
+# guarda ahi mismo (repo local, sin remoto) para no dejarlo con cambios
+# sueltos y poder volver a la base anterior si hiciera falta.
+if ($baseRegenerada -and (Test-Path (Join-Path $APP '.git'))) {
+    Paso '2b' 'Guardando la base nueva en el repo de la app'
+    Push-Location $APP
+    try {
+        git add assets/seed/seed.db tool/seed_meta.json
+        $cambios = git status --porcelain assets/seed/seed.db tool/seed_meta.json
+        if ($cambios) {
+            git commit -m "Regenera la base desde $($planilla.Name) ($(Get-Date -Format 'dd-MM-yyyy'))" | Out-Null
+            Ok 'Base guardada (commit local; este repo no tiene remoto)'
+        } else {
+            Ok 'La base no cambio'
+        }
+    } finally {
+        Pop-Location
+    }
+}
 
 # ------------------------------------------------------- 3. subir a GitHub
 
