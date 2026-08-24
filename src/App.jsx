@@ -8,6 +8,7 @@ import BarrasApiladas from './components/BarrasApiladas.jsx'
 import Descargas from './components/Descargas.jsx'
 import DetalleSeleccion from './components/DetalleSeleccion.jsx'
 import FichaEquipo from './components/FichaEquipo.jsx'
+import ImpactoEconomico from './components/ImpactoEconomico.jsx'
 import Histograma from './components/Histograma.jsx'
 import Linea from './components/Linea.jsx'
 import TablaEquipos from './components/TablaEquipos.jsx'
@@ -353,6 +354,9 @@ export default function App() {
               </div>
             </div>
           </section>
+
+          {/* ------------------------------------------ impacto economico */}
+          <ImpactoEconomico filas={filas} cd={cd} />
 
           {/* ------------------------------------------------ tendencia */}
           <section>
