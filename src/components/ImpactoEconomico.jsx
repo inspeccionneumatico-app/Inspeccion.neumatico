@@ -140,7 +140,7 @@ export default function ImpactoEconomico({ filas, cd }) {
       <div className="sec-head">
         <h2>Impacto en combustible y costos {cd && <span style={{ fontWeight: 400, color: 'var(--ink-2)' }}>· {cd}</span>}</h2>
         <p>
-          Qué cuesta rodar con la presión baja, aplicando factores publicados a las mediciones
+          Cuánto cuesta rodar con la presión baja, aplicando factores publicados a las mediciones
           de esta flota. Ajusta los parámetros con tus valores reales: quedan guardados en este
           navegador.
         </p>
