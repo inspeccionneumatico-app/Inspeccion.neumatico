@@ -86,6 +86,17 @@ html, body {
 
 /* -------------------------------------------------------- encabezado */
 header.top { margin-bottom: 26px; }
+
+/* El logo va sobre una pastilla blanca: es un logo de un solo color y sobre
+   fondo oscuro desaparecería. */
+.marca {
+  display: inline-flex; align-items: center;
+  margin-bottom: 14px; padding: 8px 12px;
+  background: #fff; border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.marca-logo { display: block; height: 40px; width: auto; }
+@media (max-width: 640px) { .marca-logo { height: 32px; } }
 .eyebrow {
   margin: 0 0 8px;
   font-size: 12px;
@@ -453,6 +464,7 @@ footer.foot {
   .solo-print { display: block; font-size: 12px; color: #333; margin: 4px 0 0; }
 
   .card { box-shadow: none; border: 1px solid #ddd; }
+  .marca { border: 0; padding: 0; margin-bottom: 10px; }
   .tile-clic { appearance: none; background: #fff; }
 
   /* Que ningun grafico se recorte ni se lo trague un contenedor. */

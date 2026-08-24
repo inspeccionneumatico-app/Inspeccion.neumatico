@@ -1,0 +1,12 @@
+Deja aqui el logo corporativo con el nombre exacto:
+
+    logo.png
+
+Esta carpeta (public/) se copia tal cual al sitio publicado, asi que basta
+con poner el archivo y volver a publicar con "Publicar reporte.bat".
+
+Recomendado: PNG con fondo transparente, de unos 240 px de alto (se muestra
+a 40 px, el doble o triple se ve nitido en pantallas retina). Tambien sirve
+.svg si lo tienes, cambiando la extension en src/App.jsx.
+
+Si el archivo no esta, el reporte simplemente no muestra el logo: no se rompe.

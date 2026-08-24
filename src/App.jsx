@@ -125,6 +125,16 @@ export default function App() {
   return (
     <div className="wrap">
       <header className="top">
+        {/* El logo vive en public/logo.png. Si el archivo no está, la imagen se
+            oculta sola y el encabezado queda igual que antes. */}
+        <div className="marca">
+          <img
+            className="marca-logo"
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="Logo corporativo"
+            onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+          />
+        </div>
         <p className="eyebrow">Reporte de flota · Inspección de neumáticos</p>
         <h1>Estado de los neumáticos de la flota</h1>
         <p className="lede">
