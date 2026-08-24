@@ -199,21 +199,22 @@ export default function ImpactoEconomico({ filas, cd }) {
           llegar</em> a la inspección, y ahí se corrige. Esta cifra es el costo de rodar con ese
           déficit: es un techo, no un promedio del año. Cuanto más seguido se revise la presión,
           menos tiempo pasa la flota en esa condición.
-          {m.sinMedir > 0 && <> Se excluyeron {fmt(m.sinMedir)} neumáticos sin presión registrada.</>}
         </p>
 
         {/* ------------------------------------------------ vida útil */}
         <h3 className="imp-h3">2 · Vida útil que se pierde por baja presión</h3>
         <p className="nota">
-          El TMC documenta que una baja presión constante del 20% reduce la vida del neumático en
-          un 30%. En esta flota hay <strong>{fmt(m.muyBajos)}</strong> neumáticos vigentes en esa
-          condición o peor.
+          El <strong>TMC</strong> (Technology &amp; Maintenance Council de la American Trucking
+          Associations, el comité técnico que fija las prácticas de mantenimiento del transporte
+          de carga en Estados Unidos) documenta que una baja presión constante del 20% reduce la
+          vida del neumático en un 30%. En esta flota hay <strong>{fmt(m.muyBajos)}</strong>{' '}
+          neumáticos vigentes en esa condición o peor.
         </p>
         <div className="grid g-tiles">
           <div className="card tile">
             <span className="label">Neumáticos 20% o más bajo el estándar</span>
             <span className="value" style={{ fontSize: 26, color: 'var(--serious)' }}>{fmt(m.muyBajos)}</span>
-            <span className="hint">umbral documentado por TMC</span>
+            <span className="hint">umbral documentado por el TMC</span>
           </div>
           <div className="card tile">
             <span className="label">Vida útil perdida</span>
@@ -229,13 +230,9 @@ export default function ImpactoEconomico({ filas, cd }) {
         {/* ------------------------------------------------ surco */}
         <h3 className="imp-h3">3 · Surco bajo: no es combustible, es el casco</h3>
         <p className="nota">
-          Conviene decirlo claro porque es contraintuitivo: <strong>un neumático gastado no
-          consume más combustible, consume menos</strong>. Su resistencia a la rodadura cae cerca
-          de un 20% a lo largo de la vida del neumático, y la industria del transporte mide entre
-          6% y 6,6% de mejora de eficiencia con el surco medio y muy gastado. El costo del surco
-          bajo es otro: seguridad —frenado en mojado, riesgo de reventón— y <strong>la pérdida del
-          casco</strong>. Si el neumático se pasa del punto de retiro, el casco puede dejar de ser
-          recauchable y hay que comprar uno nuevo en vez de recauchar.
+          El costo del surco bajo es de seguridad —frenado en mojado, riesgo de reventón— y de{' '}
+          <strong>pérdida del casco</strong>. Si el neumático se pasa del punto de retiro, el casco
+          puede dejar de ser recauchable y hay que comprar uno nuevo en vez de recauchar.
         </p>
         <div className="grid g-tiles">
           <div className="card tile">
@@ -256,7 +253,8 @@ export default function ImpactoEconomico({ filas, cd }) {
         </div>
 
         {/* ------------------------------------------------ fuentes */}
-        <h3 className="imp-h3">Fuentes</h3>
+        <details className="fuentes-caja">
+          <summary>Fuentes de los factores usados (6)</summary>
         <ul className="fuentes">
           <li>
             <strong>TMC/ATA · Recommended Practice RP 235A</strong>, «Guidelines for Tire Inflation
@@ -303,11 +301,12 @@ export default function ImpactoEconomico({ filas, cd }) {
             <a href="https://www.enap.cl/informe-semanal-de-precios" target="_blank" rel="noreferrer">informe</a>
           </li>
         </ul>
-        <p className="nota" style={{ marginTop: 10 }}>
-          Los factores son de las fuentes citadas; el precio del diésel, el consumo, el recorrido
-          anual y el costo del neumático son <strong>supuestos editables</strong> de esta flota.
-          Cambiarlos cambia todas las cifras de esta sección.
-        </p>
+          <p className="nota" style={{ marginTop: 10, marginBottom: 0 }}>
+            Los factores son de las fuentes citadas; el precio del diésel, el consumo, el recorrido
+            anual y el costo del neumático son <strong>supuestos editables</strong> de esta flota.
+            Cambiarlos cambia todas las cifras de esta sección.
+          </p>
+        </details>
       </div>
     </section>
   )

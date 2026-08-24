@@ -24,8 +24,13 @@ export default function Linea({
 
   if (!datos?.length) return null
 
+  // Los conteos van enteros; los promedios con un decimal.
+  const formatoValor = (v) =>
+    Number.isInteger(v) ? v.toLocaleString('es-CL')
+      : v.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
   const W = 760, H = 210
-  const P = { t: 14, r: 14, b: 30, l: 44 }
+  const P = { t: 24, r: 14, b: 30, l: 44 }
   const iw = W - P.l - P.r
   const ih = H - P.t - P.b
 
@@ -116,6 +121,20 @@ export default function Linea({
           />
         ))}
 
+        {/* Valor de cada punto, en tipografía chica y apagada: se puede leer
+            sin pasar el mouse y sin competir con la línea. */}
+        {datos.map((d, i) => (
+          <text
+            key={`v${i}`}
+            className={idx === i ? 'punto-val activo' : 'punto-val'}
+            x={px(i)}
+            y={py(d[campoY]) - 9}
+            textAnchor="middle"
+          >
+            {formatoValor(d[campoY])}
+          </text>
+        ))}
+
         <line className="axisline" x1={P.l} x2={W - P.r} y1={P.t + ih} y2={P.t + ih} />
 
         {datos.map((d, i) =>
@@ -136,8 +155,12 @@ export default function Linea({
               <>
                 <div className="tt-t">{activo[campoX]}</div>
                 <TtFila color={colorHex} nombre={etiquetaY} valor={`${activo[campoY].toLocaleString('es-CL')}${sufijo}`} />
-                <TtFila nombre="Inspecciones" valor={activo.inspecciones?.toLocaleString('es-CL') ?? '—'} />
-                <TtFila nombre="Neumáticos" valor={activo.neumaticos?.toLocaleString('es-CL') ?? '—'} />
+                {campoY !== 'inspecciones' && (
+                  <TtFila nombre="Inspecciones" valor={activo.inspecciones?.toLocaleString('es-CL') ?? '—'} />
+                )}
+                {campoY !== 'neumaticos' && (
+                  <TtFila nombre="Neumáticos" valor={activo.neumaticos?.toLocaleString('es-CL') ?? '—'} />
+                )}
                 {onSelect && <div className="tt-clic">Clic para ver el detalle del mes</div>}
               </>
             ),
