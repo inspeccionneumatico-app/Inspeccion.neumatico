@@ -124,11 +124,16 @@ if (-not (Test-Path (Join-Path $REPORTE 'node_modules'))) {
 Correr 'npm' @('run', 'build') $REPORTE
 Ok 'Compilado en docs\'
 
-# El nombre del archivo compilado cambia en cada build: sirve para saber
-# cuando GitHub Pages ya publico ESTA version y no la anterior.
-$indice = Get-Content (Join-Path $REPORTE 'docs\index.html') -Raw
-$huella = [regex]::Match($indice, 'index-[A-Za-z0-9_-]+\.js').Value
-if ($huella) { Write-Host "    version: $huella" }
+# Sello unico de esta publicacion. Se espera por este archivo y no por el
+# nombre del bundle: cuando el cambio no toca el JS (agregar una imagen, por
+# ejemplo) el nombre no cambia y la espera daria por publicada la version
+# anterior.
+$huella = Get-Date -Format 'yyyyMMdd-HHmmss'
+Set-Content -Path (Join-Path $REPORTE 'docs\version.txt') -Value $huella -Encoding utf8 -NoNewline
+# Evita que GitHub procese el sitio con Jekyll (ignoraria archivos con _).
+$noJekyll = Join-Path $REPORTE 'docs\.nojekyll'
+if (-not (Test-Path $noJekyll)) { Set-Content -Path $noJekyll -Value '' -NoNewline }
+Write-Host "    version: $huella"
 
 # ------------------------------------------------- 2b. guardar la base en la app
 
@@ -188,9 +193,9 @@ if ($huella) {
     for ($i = 1; $i -le 30; $i++) {
         Start-Sleep -Seconds 5
         try {
-            $sinCache = $URL + '?t=' + [guid]::NewGuid().ToString()
+            $sinCache = $URL + 'version.txt?t=' + [guid]::NewGuid().ToString()
             $r = Invoke-WebRequest -Uri $sinCache -UseBasicParsing -TimeoutSec 15
-            if ($r.Content -match [regex]::Escape($huella)) { $publicado = $true; break }
+            if ($r.Content.Trim() -eq $huella) { $publicado = $true; break }
         } catch {
             # Pages puede responder 404 mientras reconstruye; se sigue esperando.
         }
