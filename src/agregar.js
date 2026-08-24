@@ -63,6 +63,10 @@ export function agregar(filas) {
   const equiposSet = new Set()
   let riesgo = 0, advertencia = 0, bueno = 0
   let surcoCritico = 0, presionCritica = 0, presionRegularizada = 0
+  // El semáforo único ordena por gravedad (riesgo gana sobre advertencia), así
+  // que por sí solo esconde de qué dimensión viene el problema. Se cuentan las
+  // dos por separado para poder decirlo.
+  let riesgoSurco = 0, riesgoPresion = 0, riesgoAmbos = 0, advSurcoTotal = 0
   const surcos = [], presiones = []
   // Original vs recauchado, con su composición de estado.
   const porTipo = new Map()
@@ -72,6 +76,15 @@ export function agregar(filas) {
     if (f.n === 'riesgo') riesgo++
     else if (f.n === 'advertencia') advertencia++
     else bueno++
+    const malSurco = f.s < f.sm
+    const malPresion = f.r < f.rr - 5 && !f.reg
+    if (malSurco && malPresion) riesgoAmbos++
+    else if (malSurco) riesgoSurco++
+    else if (malPresion) riesgoPresion++
+    // Advertencia por surco de verdad: entre el mínimo y 6 mm, sin que la
+    // presión tenga nada que ver.
+    if (!malSurco && f.s <= 6) advSurcoTotal++
+
     if (f.s < 2.5) surcoCritico++
     // La presión solo queda pendiente si NO se reguló en la inspección.
     if (f.r < 95 && !f.reg) presionCritica++
@@ -140,6 +153,7 @@ export function agregar(filas) {
     surcoCritico,
     presionCritica,
     presionRegularizada,
+    riesgoSurco, riesgoPresion, riesgoAmbos, advSurcoTotal,
     porTipo: [...porTipo.values()]
       .map((t) => {
         const tot = t.riesgo + t.advertencia + t.bueno

@@ -190,12 +190,14 @@ export default function App() {
                 onClick={() => abrir('Neumáticos vigentes', 'la última inspección de cada equipo')}
               />
               <Tile
-                label="En riesgo" value={fmt(a.riesgo)} hint={`${a.pctRiesgo}% de los vigentes`}
+                label="En riesgo" value={fmt(a.riesgo)}
+                hint={`${fmt(a.riesgoSurco + a.riesgoAmbos)} por surco · ${fmt(a.riesgoPresion + a.riesgoAmbos)} por presión`}
                 color="var(--critical)" pct={a.pctRiesgo}
                 onClick={() => abrirDonde('Neumáticos en riesgo', 'bajo el mínimo de surco, o presión baja sin regularizar', (f) => f.n === 'riesgo')}
               />
               <Tile
-                label="Advertencia" value={fmt(a.advertencia)} hint={`${a.pctAdv}% · surco ≤ 6 mm`}
+                label="Advertencia" value={fmt(a.advSurcoTotal)}
+                hint={`surco entre el mínimo y 6 mm${a.advSurcoTotal !== a.advertencia ? ` · ${fmt(a.advSurcoTotal - a.advertencia)} de ellos ya en riesgo por presión` : ''}`}
                 color="var(--warning)" pct={a.pctAdv}
                 onClick={() => abrirDonde('Neumáticos en advertencia', 'surco ≤ 6 mm, todavía sobre el mínimo', (f) => f.n === 'advertencia')}
               />
@@ -272,6 +274,36 @@ export default function App() {
                 <strong style={{ color: 'var(--critical)' }}>▲ {a.pctRiesgo}%</strong> de los neumáticos en
                 servicio está bajo el estándar de surco o de presión y requiere atención.
                 {' '}<span className="pista-clic">Toca un tramo de la barra para ver esos neumáticos.</span>
+              </p>
+
+              {/* El semáforo ordena por gravedad, así que un neumático con la
+                  presión mal tapa su propio aviso de surco. Acá van las dos
+                  dimensiones por separado, sin que una pise a la otra. */}
+              <div className="dos-ejes">
+                <div>
+                  <h4>Por surco</h4>
+                  <ul>
+                    <li><strong>{fmt(a.riesgoSurco + a.riesgoAmbos)}</strong> bajo el mínimo del equipo</li>
+                    <li><strong>{fmt(a.advSurcoTotal)}</strong> entre el mínimo y 6 mm</li>
+                    <li><strong>{fmt(a.vigentes - a.riesgoSurco - a.riesgoAmbos - a.advSurcoTotal)}</strong> sobre 6 mm</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4>Por presión</h4>
+                  <ul>
+                    <li><strong>{fmt(a.riesgoPresion + a.riesgoAmbos)}</strong> bajo estándar sin regularizar</li>
+                    <li><strong>{fmt(a.presionRegularizada)}</strong> llegaron bajas y se regularizaron</li>
+                    <li><strong>{fmt(a.vigentes - a.riesgoPresion - a.riesgoAmbos - a.presionRegularizada)}</strong> en norma al llegar</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="nota" style={{ marginTop: 8, marginBottom: 0 }}>
+                Las dos listas suman {fmt(a.vigentes)} cada una: son dos miradas del mismo
+                neumático, no dos grupos distintos.
+                {a.riesgoAmbos > 0 && (
+                  <> <strong>{fmt(a.riesgoAmbos)}</strong>{' '}
+                  {a.riesgoAmbos === 1 ? 'está' : 'están'} mal en las dos.</>
+                )}
               </p>
             </div>
           </section>
