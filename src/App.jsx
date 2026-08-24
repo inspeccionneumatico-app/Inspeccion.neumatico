@@ -384,9 +384,9 @@ export default function App() {
               <div className="card">
                 <h3 style={{ margin: '0 0 4px', fontSize: 14 }}>Presión al llegar (PSI)</h3>
                 <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
-                  Cómo se encontró el neumático, antes de regularizar. La planilla
-                  registra 100 PSI de estándar en todas las posiciones, también en el eje
-                  direccional · tolerancia 5 PSI
+                  Cómo se encontró el neumático, antes de regularizar. La flota infla a
+                  100 PSI todas las posiciones, incluido el eje direccional · tolerancia
+                  5 PSI
                 </p>
                 <Histograma
                   datos={a.distPresion} colorDe={colorPresion} unidad="PSI" total={a.vigentes}
