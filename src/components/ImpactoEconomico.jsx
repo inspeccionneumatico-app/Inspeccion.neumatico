@@ -67,7 +67,7 @@ function Param({ etiqueta, valor, onChange, sufijo, paso = 1, ancho = 92 }) {
   )
 }
 
-export default function ImpactoEconomico({ filas, cd }) {
+export default function ImpactoEconomico({ filas, cd, flota }) {
   const [p, setP] = useState(() => {
     try {
       return { ...DEFECTO, ...JSON.parse(localStorage.getItem(CLAVE_LS) || '{}') }
@@ -138,7 +138,14 @@ export default function ImpactoEconomico({ filas, cd }) {
   return (
     <section>
       <div className="sec-head">
-        <h2>Impacto en combustible y costos {cd && <span style={{ fontWeight: 400, color: 'var(--ink-2)' }}>· {cd}</span>}</h2>
+        <h2>
+          Impacto en combustible y costos
+          {(flota || cd) && (
+            <span style={{ fontWeight: 400, color: 'var(--ink-2)' }}>
+              {' '}· {[flota, cd].filter(Boolean).join(' · ')}
+            </span>
+          )}
+        </h2>
         <p>
           Cuánto cuesta rodar con la presión baja, aplicando factores publicados a las mediciones
           de esta flota. Ajusta los parámetros con tus valores reales: quedan guardados en este

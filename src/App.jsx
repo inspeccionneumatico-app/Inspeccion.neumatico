@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { meta, centros, ACTUAL as actual, EQUIPOS as TODOS_EQUIPOS, seriePorCd, TIPOS, todasLasMediciones } from './datos.js'
 import { ESTADOS, colorSurco, colorPresion, fmt } from './estados.js'
-import { filtrar, agregar, enBinSurco, enBinPresion } from './agregar.js'
+import { filtrar, agregar, serieMensual, enBinSurco, enBinPresion } from './agregar.js'
+import { FLOTAS, flotaPorClave, enFlota } from './flotas.js'
 import BarraFiltros from './components/BarraFiltros.jsx'
 import BarrasH from './components/BarrasH.jsx'
 import BarrasApiladas from './components/BarrasApiladas.jsx'
@@ -60,39 +61,66 @@ function Tile({ label, value, hint, color, pct, onClick }) {
 export default function App() {
   const [cd, setCd] = useState(null)
   const [q, setQ] = useState('')
+  // Flota en pantalla. Arranca en Logística: por ahora el reporte se mira solo
+  // sobre esa flota y el resto queda oculto (un clic en «Toda la flota» lo trae
+  // de vuelta).
+  const [flota, setFlota] = useState(FLOTAS[0]?.clave ?? null)
   // Equipo cuyo historial se está mirando (null = ficha cerrada).
   const [ficha, setFicha] = useState(null)
   // Selección de un gráfico: las filas que lo formaron (null = cerrado).
   const [detalle, setDetalle] = useState(null)
 
-  // Equipos por centro (para el conteo de los chips), fijo.
+  const infoFlota = flotaPorClave(flota)
+
+  // Un centro del filtro anterior puede no existir dentro de la flota nueva,
+  // así que al cambiar de flota se suelta.
+  const elegirFlota = (clave) => { setFlota(clave); setCd(null) }
+
+  // Equipos de la flota en pantalla; de aquí salen los conteos de los chips.
+  const equiposFlota = useMemo(
+    () => (flota ? TODOS_EQUIPOS.filter((e) => enFlota(e.patente, flota)) : TODOS_EQUIPOS),
+    [flota],
+  )
+
   const conteosCd = useMemo(() => {
     const m = {}
-    for (const e of TODOS_EQUIPOS) {
+    for (const e of equiposFlota) {
       if (e.cd) m[e.cd] = (m[e.cd] || 0) + 1
     }
     return m
-  }, [])
+  }, [equiposFlota])
 
-  const filas = useMemo(() => filtrar(actual, cd, q), [cd, q])
+  const centrosVisibles = useMemo(
+    () => (flota ? centros.filter((c) => conteosCd[c]) : centros),
+    [flota, conteosCd],
+  )
+
+  const filas = useMemo(() => filtrar(actual, cd, q, flota), [cd, q, flota])
   const a = useMemo(() => agregar(filas), [filas])
 
   // Equipos de la tabla: respetan el mismo filtro.
   const equiposFiltrados = useMemo(() => {
     const term = q.trim().toUpperCase()
-    return TODOS_EQUIPOS.filter(
+    return equiposFlota.filter(
       (e) => (!cd || e.cd === cd) && (!term || e.patente.includes(term)),
     )
-  }, [cd, q])
+  }, [cd, q, equiposFlota])
 
-  // La tendencia usa el histórico completo del centro elegido.
-  const serie = seriePorCd[cd ?? 'TODOS'] ?? []
+  // La tendencia usa el histórico completo del centro elegido. Para una flota
+  // no hay serie precalculada: se arma del histórico, igual que la del ETL.
+  const serie = useMemo(() => {
+    if (!flota) return seriePorCd[cd ?? 'TODOS'] ?? []
+    return serieMensual(
+      todasLasMediciones().filter((f) => enFlota(f.p, flota) && (!cd || f.c === cd)),
+    )
+  }, [flota, cd])
 
   // --- Bajar al detalle desde cualquier gráfico -------------------------
   // Cada gráfico avisa qué se tocó; acá se traduce a las mediciones que lo
   // formaron y se abren en el panel.
   const termino = q.trim().toUpperCase()
-  const contexto = [cd, termino && `patente ${termino}`].filter(Boolean).join(' · ')
+  const contexto = [infoFlota && `flota ${infoFlota.etiqueta}`, cd, termino && `patente ${termino}`]
+    .filter(Boolean).join(' · ')
 
   const abrir = (titulo, criterio, base = filas) =>
     setDetalle({
@@ -107,7 +135,7 @@ export default function App() {
   // El histórico completo se arma solo cuando hace falta (clic en la tendencia).
   const abrirMes = (punto) => {
     const delMes = todasLasMediciones().filter(
-      (f) => f.f.slice(0, 7) === punto.mes && (!cd || f.c === cd),
+      (f) => f.f.slice(0, 7) === punto.mes && (!cd || f.c === cd) && enFlota(f.p, flota),
     )
     abrir(`Inspecciones de ${punto.mes}`, `${punto.inspecciones} inspecciones del mes`, delMes)
   }
@@ -138,31 +166,42 @@ export default function App() {
         <p className="eyebrow">Reporte de flota · Inspección de neumáticos</p>
         <h1>Estado de los neumáticos de la flota</h1>
         <p className="lede">
-          Consolidado de {fmt(meta.inspecciones)} inspecciones sobre {fmt(meta.equipos)} equipos.
+          {infoFlota ? (
+            <>
+              Flota <strong>{infoFlota.etiqueta}</strong>: {fmt(a.equipos)} equipos de los{' '}
+              {fmt(meta.equipos)} de la base.
+            </>
+          ) : (
+            <>Consolidado de {fmt(meta.inspecciones)} inspecciones sobre {fmt(meta.equipos)} equipos.</>
+          )}{' '}
           Los indicadores reflejan la <strong>última inspección de cada equipo</strong>;
           las tendencias usan el histórico completo.
         </p>
         <span className="periodo">📅 {fecha(meta.desde)} → {fecha(meta.hasta)}</span>
-        <Descargas cd={cd} q={q} />
+        <Descargas cd={cd} q={q} flota={flota} />
       </header>
 
       {/* Solo en el PDF: deja constancia de qué se está viendo. */}
       <p className="solo-print">
+        {infoFlota ? `Flota: ${infoFlota.etiqueta} (${infoFlota.patentes.length} equipos). ` : 'Flota completa. '}
         {cd ? `Centro: ${cd}. ` : 'Todos los centros. '}
         {q.trim() ? `Patente: ${q.trim().toUpperCase()}. ` : ''}
         Datos al {fecha(meta.hasta)}.
       </p>
 
       <BarraFiltros
-        centros={centros}
+        centros={centrosVisibles}
         conteos={conteosCd}
         cd={cd}
         setCd={setCd}
         q={q}
         setQ={setQ}
+        flota={flota}
+        setFlota={elegirFlota}
         vigentes={a.vigentes}
         equipos={a.equipos}
-        totalEquipos={TODOS_EQUIPOS.length}
+        totalEquipos={equiposFlota.length}
+        totalFlota={TODOS_EQUIPOS.length}
       />
 
       {sinResultados ? (
@@ -182,7 +221,8 @@ export default function App() {
             </div>
             <div className="grid g-tiles">
               <Tile
-                label="Equipos" value={fmt(a.equipos)} hint={cd ? `en ${cd}` : 'toda la flota'}
+                label="Equipos" value={fmt(a.equipos)}
+                hint={cd ? `en ${cd}` : infoFlota ? `flota ${infoFlota.etiqueta}` : 'toda la flota'}
                 onClick={() => abrir('Todos los equipos', `${a.equipos} equipos con inspección vigente`)}
               />
               <Tile
@@ -399,7 +439,7 @@ export default function App() {
           </section>
 
           {/* ------------------------------------------ impacto economico */}
-          <ImpactoEconomico filas={filas} cd={cd} />
+          <ImpactoEconomico filas={filas} cd={cd} flota={infoFlota?.etiqueta} />
 
           {/* ------------------------------------------------ tendencia */}
           <section>
@@ -407,7 +447,7 @@ export default function App() {
               <h2>Tendencia histórica {cd && <span style={{ fontWeight: 400, color: 'var(--ink-2)' }}>· {cd}</span>}</h2>
               <p>
                 Actividad de inspección y desgaste promedio mes a mes ({serie.length} meses con registros).
-                Sigue el filtro de centro; la búsqueda por patente no la altera.
+                Sigue los filtros de flota y centro; la búsqueda por patente no la altera.
                 {' '}<span className="pista-clic">Toca un mes para ver sus inspecciones.</span>
               </p>
             </div>
@@ -523,6 +563,13 @@ export default function App() {
           fotografías. Se descartaron {meta.descartadas} mediciones fuera de rango físico (errores de
           captura del archivo original).
         </p>
+        {infoFlota && (
+          <p>
+            <strong>Alcance.</strong> Este reporte está filtrado por la flota{' '}
+            <strong>{infoFlota.etiqueta}</strong> ({infoFlota.patentes.length} equipos del archivo de
+            PPU entregado por la operación). Los totales de abajo son los de la base completa.
+          </p>
+        )}
         <p>
           Generado desde la base de la app Inspección Neumáticos · {fmt(meta.equipos)} equipos ·{' '}
           {fmt(meta.neumaticosHistoricos)} registros históricos · {fecha(meta.desde)} a {fecha(meta.hasta)}.

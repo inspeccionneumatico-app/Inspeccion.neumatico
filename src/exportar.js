@@ -1,5 +1,6 @@
 /** Arma las hojas del Excel a partir de la base del reporte. */
 import { EQUIPOS, historialDe, meta } from './datos.js'
+import { enFlota, flotaPorClave } from './flotas.js'
 import { construirXlsx, descargar } from './xlsx.js'
 
 const ETIQUETA_NIVEL = { riesgo: 'Riesgo', advertencia: 'Advertencia', bueno: 'Óptimo' }
@@ -34,11 +35,14 @@ function filaMedicion(patente, insp, n) {
  * Tres hojas: el estado vigente (lo que muestra el reporte), el histórico
  * completo y un resumen por equipo.
  */
-export function hojasDeDatos() {
+export function hojasDeDatos(flota = null) {
   const actual = [COLUMNAS_MEDICION]
   const historico = [COLUMNAS_MEDICION]
+  // El Excel trae lo mismo que está en pantalla: si se está mirando una flota,
+  // los demás equipos tampoco salen en el archivo.
+  const equiposFlota = EQUIPOS.filter((e) => enFlota(e.patente, flota))
 
-  for (const e of EQUIPOS) {
+  for (const e of equiposFlota) {
     const inspecciones = historialDe(e.patente)
     inspecciones.forEach((insp, i) => {
       for (const n of insp.neumaticos) {
@@ -54,7 +58,7 @@ export function hojasDeDatos() {
     'Última inspección', 'En riesgo', 'Advertencia', 'Óptimos',
     'Surco promedio (mm)', 'Presión promedio (PSI)',
   ]]
-  for (const e of EQUIPOS) {
+  for (const e of equiposFlota) {
     equipos.push([
       e.patente, e.cd ?? 'Sin centro', e.tipo, e.ejes, e.neumaticos,
       e.inspecciones, e.ultima ? { fecha: e.ultima } : '',
@@ -70,7 +74,8 @@ export function hojasDeDatos() {
   ]
 }
 
-export async function descargarExcel() {
-  const blob = await construirXlsx(hojasDeDatos())
-  descargar(blob, `inspeccion-neumaticos-${meta.hasta}.xlsx`)
+export async function descargarExcel(flota = null) {
+  const blob = await construirXlsx(hojasDeDatos(flota))
+  const sufijo = flotaPorClave(flota) ? `-${flota}` : ''
+  descargar(blob, `inspeccion-neumaticos${sufijo}-${meta.hasta}.xlsx`)
 }

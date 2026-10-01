@@ -4,6 +4,8 @@
  * búsqueda por patente recalculan TODO el reporte, no solo la tabla.
  */
 
+import { enFlota } from './flotas.js'
+
 const BORDES_SURCO = [2.5, 4, 6, 8, 10, 12, Infinity]
 const ETIQ_SURCO = ['< 2,5', '2,5–4', '4–6', '6–8', '8–10', '10–12', '> 12']
 
@@ -49,13 +51,42 @@ function top(filas, campo, n) {
 const prom = (xs, dec = 1) =>
   xs.length ? Number((xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(dec)) : 0
 
-/** Filtra las filas del estado actual por centro y por patente. */
-export function filtrar(actual, cd, q) {
+/** Filtra las filas del estado actual por flota, centro y patente. */
+export function filtrar(actual, cd, q, flota) {
   const term = q.trim().toUpperCase()
-  if (!cd && !term) return actual
+  if (!cd && !term && !flota) return actual
   return actual.filter(
-    (f) => (!cd || f.c === cd) && (!term || f.p.includes(term)),
+    (f) => (!cd || f.c === cd) && (!term || f.p.includes(term)) && enFlota(f.p, flota),
   )
+}
+
+/**
+ * Serie mensual a partir de mediciones del histórico.
+ *
+ * `seriePorCd` viene precalculada para la flota completa y para cada centro,
+ * que es lo que cubre el 99% de los casos. Cuando el filtro es una flota no hay
+ * serie lista, así que se arma aquí con la misma definición: una inspección es
+ * un par patente+fecha.
+ */
+export function serieMensual(mediciones) {
+  const meses = new Map()
+  const vistas = new Set()
+  for (const f of mediciones) {
+    const mes = f.f.slice(0, 7)
+    let e = meses.get(mes)
+    if (!e) meses.set(mes, (e = { mes, inspecciones: 0, neumaticos: 0, riesgo: 0, surco: [] }))
+    e.neumaticos++
+    e.surco.push(f.s)
+    if (f.n === 'riesgo') e.riesgo++
+    const insp = `${f.p}|${f.f}`
+    if (!vistas.has(insp)) { vistas.add(insp); e.inspecciones++ }
+  }
+  return [...meses.values()]
+    .sort((a, b) => a.mes.localeCompare(b.mes))
+    .map(({ surco, ...e }) => ({
+      ...e,
+      surcoProm: surco.length ? Number((surco.reduce((a, b) => a + b, 0) / surco.length).toFixed(1)) : 0,
+    }))
 }
 
 /** Todos los agregados que alimentan el reporte, para las filas dadas. */

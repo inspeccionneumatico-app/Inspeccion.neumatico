@@ -158,8 +158,19 @@ h1 {
   color: var(--ink-muted); font-size: 15px; line-height: 1; padding: 2px 4px;
 }
 .chip-reset { border-color: var(--critical); color: var(--critical); font-weight: 600; }
+/* La flota es el filtro de mayor alcance: su chip pesa mas que el de centro. */
+.chip-flota { font-size: 13px; padding: 7px 14px; }
+.chip-flota[aria-pressed="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
 .filtros-estado { margin: 0; font-size: 12.5px; color: var(--ink-2); }
 .filtros-estado strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Aviso de que se esta viendo un subconjunto y el resto quedo fuera. */
+.filtros-aviso {
+  margin: 0; padding: 8px 11px;
+  font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-left: 3px solid var(--accent); border-radius: 0 7px 7px 0;
+}
+.filtros-aviso strong { color: var(--ink); }
 
 /* ------------------------------------------------------------ layout */
 section { margin-top: 34px; }

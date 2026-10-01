@@ -8,13 +8,13 @@ import { descargarExcel } from '../exportar.js'
  * imprime lo que está en pantalla, con el filtro aplicado, sin sumar una
  * librería de render al bundle.
  */
-export default function Descargas({ cd, q }) {
+export default function Descargas({ cd, q, flota = null }) {
   const [estado, setEstado] = useState(null)
 
   async function excel() {
     setEstado('generando')
     try {
-      await descargarExcel()
+      await descargarExcel(flota)
       setEstado('listo')
       setTimeout(() => setEstado(null), 4000)
     } catch (e) {
@@ -23,7 +23,7 @@ export default function Descargas({ cd, q }) {
     }
   }
 
-  const filtrado = cd || q.trim()
+  const filtrado = cd || q.trim() || flota
 
   return (
     <div className="descargas no-print">
@@ -40,7 +40,8 @@ export default function Descargas({ cd, q }) {
           : estado === 'listo'
             ? 'Excel descargado.'
             : <>El PDF sale con {filtrado ? 'el filtro aplicado' : 'el reporte completo'} —
-              elige «Guardar como PDF» en el diálogo. El Excel trae la base completa
+              elige «Guardar como PDF» en el diálogo. El Excel trae{' '}
+              {flota ? 'los equipos de la flota en pantalla' : 'la base completa'}{' '}
               (estado actual, histórico y equipos).</>}
       </span>
     </div>
